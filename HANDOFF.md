@@ -11,6 +11,11 @@
 ユーザー就寝中の自走作業。承認不要(bypassPermissions)。本筋: ①Java版NPC挙動のUnity反映 → ②ML環境(ML-Agents)構築 → ③学習開始。
 エージェントはUnity実行不可 → `Editor.log` を読んで検証。画面は1分でオフ(処理継続)。
 
+> **🔴 起床後の最優先（重要）**: Editor.log は 6/9 23:39 で停止＝**夜間のコード変更はUnityで未コンパイル検証**。
+> まず **Unityをフォーカス→再コンパイル→Editor.log でエラー0を確認**すること。各変更は通読で構文・参照を自己レビュー済(コンパイル前提OK)だが、Unity実機検証は未。
+> 万一 error CS が出たら疑うべき夜間変更: `RuleBasedNpcController.cs`(PD操舵に全面書換) / `EcsRobotSim.cs`(速度供給追加) / `MatchDirector.cs`(BuildObservation/TagBraces) / `Assets/FGC/Tests/`(新規)。いずれも `git revert` で個別に戻せる（コミットは機能単位で分離済）。
+> その後: Test Runner(EditMode)でNPCテスト緑 → Play で①NPC挙動目視 → ②Unity側ml-agents有効化(★手順) → ③学習。
+
 - **[完了 00:55] ①競技NPC操舵則をJava `CompetitionManager` から忠実移植**: 従来Unity版は練習用 `Behaviors.java`(kP=6・Pのみ)を移植していたが、
   **競技NPCの正典は別物**と判明し置換。`RuleBasedNpcController` を競技則へ: heading=純目標70%＋移動方向(回避込)30%ブレンド(DIFF_HEAD_PURE_BLEND)、
   旋回=**PD制御 kP=3.5/kD=1.0**(errorDot≈-`obs.AngularVelocity`)・**5°デッドバンド**(首振り防止)・±4rad/s、前進=**45°ゲート内で正対度(1-|err|/45°)×距離比 min(1,dist*3/最高速1.51)**。
