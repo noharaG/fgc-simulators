@@ -46,6 +46,9 @@
   **既定の useEcsMechanics ON では StorageTrigger は無効化**され、格納は `EcsMechanics.OnDeposited`(同シグネチャ・既に発火実装あり L170/196)で起きる。
   → このままML学習すると**主報酬(格納+1)が一切入らず学習が破綻**するところだった。`RewardShaper.BindEcs(EcsMechanics)` を追加し、`MatchDirector.CreateRewardShaper` で `_ecsMechanics` を購読するよう結線。これでECSモード学習でも格納報酬が確実に入る。
   ※時間ペナルティ/登攀ボーナスは RobotActor 経由でECSモードでも既に機能。報酬係数: 格納1.0/Extinguisher0.5/登攀0.3per段/時間-0.01per秒。
+- **✅ [完了 01:35] ①NPC操舵の EditModeテスト追加（Play不要で挙動検証）**: `Assets/FGC/Tests/RuleBasedNpcControllerTests.cs` を新規作成。
+  Unity Play不可の制約下でも操舵則を担保するため、決定論的に5ケース検証: ①正対→前進&旋回0 ②右90°→旋回&前進ゼロ(45°ゲート) ③5°内→デッドバンドで旋回0 ④0.35m内→Intake要求 ⑤壁0.4m内→前進停止。
+  `FGC.Tests.asmdef` に `FGC.Robot` 参照を追加。Test Runner(EditMode)で緑になれば移植した競技PD操舵が正しい。**テストコード＝ランタイム非影響・安全**。
 - **★Unity側ML再有効化の手順（起床後に実施推奨・要Editor.log検証/失敗即revert）**:
   1. `Packages/manifest.json` に `com.unity.ml-agents` を追加（版は Package Manager で 6000.0 が解決する版。Python mlagents 1.1.0 との通信版整合に注意。まず Window>Package Manager で「ML Agents」を入れて解決させるのが安全）。
   2. Editor.log で **版解決＋コンパイル0** を確認。Sentis/Inference Engine 由来の error CS が出たら manifest を即 revert（git）。
