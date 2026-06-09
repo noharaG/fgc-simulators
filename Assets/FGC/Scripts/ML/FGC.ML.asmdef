@@ -1,0 +1,20 @@
+{
+  "name": "FGC.ML",
+  "rootNamespace": "FGC.ML",
+  "references": [
+    "FGC.Core",
+    "FGC.Robot",
+    "Unity.ML-Agents"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [
+    "FGC_MLAGENTS"
+  ],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

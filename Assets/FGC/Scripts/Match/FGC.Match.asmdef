@@ -1,0 +1,17 @@
+{
+  "name": "FGC.Match",
+  "rootNamespace": "FGC.Match",
+  "references": [
+    "FGC.Core",
+    "FGC.Robot"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

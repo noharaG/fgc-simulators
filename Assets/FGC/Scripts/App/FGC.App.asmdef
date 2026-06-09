@@ -1,0 +1,23 @@
+{
+  "name": "FGC.App",
+  "rootNamespace": "FGC.App",
+  "references": [
+    "FGC.Core",
+    "FGC.Field",
+    "FGC.Ball",
+    "FGC.Robot",
+    "FGC.Match",
+    "FGC.Input",
+    "FGC.VR",
+    "FGC.UI"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

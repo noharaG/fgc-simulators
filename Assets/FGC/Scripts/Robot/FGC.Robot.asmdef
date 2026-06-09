@@ -1,0 +1,17 @@
+{
+  "name": "FGC.Robot",
+  "rootNamespace": "FGC.Robot",
+  "references": [
+    "FGC.Core",
+    "FGC.Input"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
