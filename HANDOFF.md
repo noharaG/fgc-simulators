@@ -7,6 +7,20 @@
 
 ---
 
+## 🌙 夜間自走ログ（2026-06-09 夜〜・15分間隔ループ a5f32abb で進行中）
+ユーザー就寝中の自走作業。承認不要(bypassPermissions)。本筋: ①Java版NPC挙動のUnity反映 → ②ML環境(ML-Agents)構築 → ③学習開始。
+エージェントはUnity実行不可 → `Editor.log` を読んで検証。画面は1分でオフ(処理継続)。
+
+- **[完了] ①NPC壁回避＋他ロボ回避の移植**: Java `Behaviors.java` の `seekBallAvoidPlayer`(他ロボ回避)＋`isNearWall`(壁回避)を
+  Unity `RuleBasedNpcController` に忠実移植（回避半径1.0m・重み×1.5・壁0.4m・操舵kP=6/±3rad/sは既存と同値）。
+  `RobotObservation.NearestOpponent/NearestTeammate` を使用。これでNPCが球/ゴールへ向かいつつ近接ロボと壁を避けて回り込む。
+  ※Java練習モードの12挙動(Still/Patrol/Circle/Wander/Bounce/Sweep/Spin/Drunk/Skittish 等)は競技NPCには不採用（練習用の動きパターンのため）。競技NPCの動き＝球回収→ゴール→シュート＋回避、が忠実な反映。
+- **[次] ②ML環境構築**: `FGC_MLAGENTS` トグル復活（asmdef defineConstraints / FGC.App参照 / Player Settings の Scripting Define Symbols に `FGC_MLAGENTS`）、
+  manifestに ml-agents 復帰。Sentis→Inference Engine 問題は要回避策（HANDOFF §「ML再有効化の手順」参照）。
+- **[次] ③学習開始**: PPO自己対戦。`ml/train.ps1`・yaml 既存。`FGC > Build Training Scene`。
+
+---
+
 ## 🟢 新セッション再開ガイド（最初にここだけ読めばOK）
 
 ### いま何をしているか
