@@ -78,6 +78,8 @@
 - **✅ [検証 02:15] ML配線の完全性を点検（修正不要＝良好）**: `MatchDirector` の ML経路を確認 — 観測注入 `ml.observationProvider=()=>BuildObservation(actor)`(L689)、
   エピソード終了 `OnFinish` で勝敗報酬(self_play用 +1/-1/0)＋`FinishEpisode()`(L145-159)、`BehaviorParameters/DecisionRequester` は `MLAgentController.Awake` で自動設定、
   報酬は前回修正で StorageTrigger＋EcsMechanics 両購読。**＝ML学習に必要な配線は全て揃っており、隠れたギャップは無い**（Unity側ml-agents有効化後そのまま学習可能）。
+  追記(04:35): **`FGC > Build Training Scene` の配線も検証＝正常**: 新規シーン→フィールド焼込→`autoRestart=true`(連続)＋`autoBegin=true`(即開始)＋`SetAllKind(MLAgent)`(全6機ML)＋観測カメラ＋HUD。
+  FGC_MLAGENTS有効時はCreateRobotがobservationProvider/RewardShaper結線、無効時はNPC代替で無害。→**ML readiness監査(報酬✓/観測✓/配線✓/学習シーン✓)が一巡＝コード面の準備完了**。
 - **★Unity側ML再有効化の手順（起床後に実施推奨・要Editor.log検証/失敗即revert）**:
   - ★**[2026-06-10 Web調査で判明・重要]** Sentis blocker の正解は「**新しい `com.unity.ml-agents` 4.0.x 系を使う**」こと。
     **min対応Unityが 6000.0 に更新され、4.0.x は旧Sentisではなく Inference Engine(`com.unity.ai.inference`) ベース**＝当エディタ(6000.0.76)で解決可能。旧3.0.0(Unity.Sentis依存)に固執しない。
