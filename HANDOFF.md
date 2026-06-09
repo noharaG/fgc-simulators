@@ -49,6 +49,10 @@
 - **✅ [完了 01:35] ①NPC操舵の EditModeテスト追加（Play不要で挙動検証）**: `Assets/FGC/Tests/RuleBasedNpcControllerTests.cs` を新規作成。
   Unity Play不可の制約下でも操舵則を担保するため、決定論的に5ケース検証: ①正対→前進&旋回0 ②右90°→旋回&前進ゼロ(45°ゲート) ③5°内→デッドバンドで旋回0 ④0.35m内→Intake要求 ⑤壁0.4m内→前進停止。
   `FGC.Tests.asmdef` に `FGC.Robot` 参照を追加。Test Runner(EditMode)で緑になれば移植した競技PD操舵が正しい。**テストコード＝ランタイム非影響・安全**。
+  追記(02:15): D項減衰テスト(既に旋回中はomegaが減衰)を追加＝計6ケース。`FieldLayout.NpcGoal` は純粋関数でEditMode例外なしを確認。
+- **✅ [検証 02:15] ML配線の完全性を点検（修正不要＝良好）**: `MatchDirector` の ML経路を確認 — 観測注入 `ml.observationProvider=()=>BuildObservation(actor)`(L689)、
+  エピソード終了 `OnFinish` で勝敗報酬(self_play用 +1/-1/0)＋`FinishEpisode()`(L145-159)、`BehaviorParameters/DecisionRequester` は `MLAgentController.Awake` で自動設定、
+  報酬は前回修正で StorageTrigger＋EcsMechanics 両購読。**＝ML学習に必要な配線は全て揃っており、隠れたギャップは無い**（Unity側ml-agents有効化後そのまま学習可能）。
 - **★Unity側ML再有効化の手順（起床後に実施推奨・要Editor.log検証/失敗即revert）**:
   - ★**[2026-06-10 Web調査で判明・重要]** Sentis blocker の正解は「**新しい `com.unity.ml-agents` 4.0.x 系を使う**」こと。
     **min対応Unityが 6000.0 に更新され、4.0.x は旧Sentisではなく Inference Engine(`com.unity.ai.inference`) ベース**＝当エディタ(6000.0.76)で解決可能。旧3.0.0(Unity.Sentis依存)に固執しない。

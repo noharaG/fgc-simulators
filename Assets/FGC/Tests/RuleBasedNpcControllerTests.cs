@@ -72,6 +72,20 @@ namespace FGC.Tests
         }
 
         [Test]
+        public void DTerm_DampsTurnWhenAlreadyRotating()
+        {
+            var c = new RuleBasedNpcController();
+            // 球は真右(err≈+π/2)。角速度0なら omega=clamp(π/2*3.5)=4 → Turn=1。
+            var still = Obs(new Vector3(3.5f, 0f, 3.5f), 0f, new Vector3(5.0f, 0f, 3.5f));
+            float turnStill = c.GetCommand(still, Dt).Turn;
+            // 既に目標方向へ高速旋回中(+4rad/s)なら PD の D項(-Kd*角速度)で旋回指令が減衰するはず。
+            var spinning = still;
+            spinning.AngularVelocity = 4f;
+            float turnSpin = c.GetCommand(spinning, Dt).Turn;
+            Assert.Less(turnSpin, turnStill, "既に旋回中はD項で旋回指令が減衰するはず（オーバーシュート抑制）");
+        }
+
+        [Test]
         public void NearWallFacingIt_StopsForward()
         {
             var c = new RuleBasedNpcController();
