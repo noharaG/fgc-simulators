@@ -113,7 +113,7 @@ namespace FGC.UI
 
         private void ApplyPlacement()
         {
-            if (rig != null) AllianceStationPlacer.Place(rig, config.PlayerAlliance);
+            if (rig != null) AllianceStationPlacer.Place(rig, config);
         }
 
         private void Changed() => OnConfigChanged?.Invoke(config);

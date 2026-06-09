@@ -45,6 +45,18 @@ namespace FGC.Match
             }
         }
 
+        /// <summary>
+        /// プレイヤー（人間）が操縦しているスロット番号。視点をそのロボの真後ろへ置くのに使う。
+        /// 自陣に人間スロットが無ければ同盟先頭（赤0/青3）を返す。複数あれば最初の1つ。
+        /// </summary>
+        public int HumanSlotIndex()
+        {
+            foreach (var s in Slots)
+                if (s.Kind == ControllerKind.Human && s.Alliance == PlayerAlliance)
+                    return s.SlotIndex;
+            return PlayerAlliance == AllianceColor.Red ? 0 : 3;
+        }
+
         /// <summary>全6スロットを同じ制御ソースにする（学習用＝全ML 等）。</summary>
         public void SetAllKind(ControllerKind kind)
         {

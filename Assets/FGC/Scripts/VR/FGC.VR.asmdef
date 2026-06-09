@@ -4,7 +4,8 @@
   "references": [
     "FGC.Core",
     "FGC.Match",
-    "Unity.XR.CoreUtils"
+    "Unity.XR.CoreUtils",
+    "Unity.InputSystem"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

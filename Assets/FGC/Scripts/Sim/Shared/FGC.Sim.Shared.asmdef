@@ -1,0 +1,17 @@
+{
+  "name": "FGC.Sim.Shared",
+  "rootNamespace": "FGC.Sim.Shared",
+  "references": [
+    "Unity.Mathematics",
+    "Unity.Burst"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": true
+}

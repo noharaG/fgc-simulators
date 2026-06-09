@@ -1,9 +1,218 @@
 # 引継ぎ資料 — FGCシミュレーター レベルマックス
 
-最終更新: 2026-06-09（★Unity起動セッション: 6.0で開きコンパイル成功・FGCメニュー動作・Play でフィールド生成まで到達。
-ML-Agentsは現行Unity全滅(Sentis廃止)のため一時無効化。マゼンタ修正中。詳細は直下「Unity起動セッション結果」）
+最終更新: 2026-06-09 20:20（★ECS/DOTS移行セッション。段階①②③④検証済＋**段階⑤コンパイル0・Play例外なし**（HUDタイマー進行/終了の目視のみ残）。
+チェックポイント要約は別紙 `ECS移行_引継ぎ_2026-06-09.md`。下の「新セッション再開ガイド」を最初に読む）
 この資料だけ読めば作業を再開できるようにまとめてある。設計の正典は `PLAN.md`。
-詳細な実装ログは §8以降（tick A〜R）。まず下の「現在地サマリ」を読めば全体像がつかめる。
+詳細な実装ログは §8以降（tick A〜R）。
+
+---
+
+## 🟢 新セッション再開ガイド（最初にここだけ読めばOK）
+
+### いま何をしているか
+Unity 6.0 LTS(**6000.0.76f1**) のFGC2026 VRシミュレータ。**標準PhysX＋MonoBehaviour → Unity Physics(ECS/DOTS)＋Burst へ全面移行中**
+（500球＋6ロボの物理をマルチコア化するのが目的）。**段階移行**で、各段階はビルドが通る単位＋ユーザーがUnityで都度検証。
+- **全体計画書（承認済み・全8段階）**: `C:\Users\genri\.claude\plans\fancy-launching-umbrella.md`
+- 移行前のゲーム本体は完成済み（試合全メカ＋スコア＋HUD＋VRリグ）。設計正典は `PLAN.md`。
+
+### 移行の進捗
+- **段階①「ECS土台」✅完了（検証済・テスト全緑）**: パッケージ導入＋運動学の純数学版`DriveKinematics`＋同値テスト。
+- **段階②「球のECS化」✅完了（検証済）**: `EcsBallSim`がECS球500＋ECS床/壁を生成、Unity Physicsが物理(マルチコア)、描画は`Graphics.DrawMeshInstanced`。
+- **段階③「ロボのECS化」✅完了（検証済）**: `EcsRobotSim`が6ロボをECS動的剛体化し球と同一物理ワールドへ。
+  GameObjectロボはkinematic化して可視/機構/観測シェルとして残し、TransformをECSから同期。切替フラグ`useEcsRobots`(既定**ON**)。OFFで段階②へ即ロールバック。
+  **Editor.log検証**: コンパイル0・Play稼働（`[FGC] ECSロボを生成: 6機`／Play中ランタイム例外なし）。
+  停止時OnDestroyのEntityQuery.Dispose NRE（既存EcsBallSimにもあった）も `World.IsCreated` ガードで修正済。
+- **段階④「判定機構のECS化」✅完了（検証済）**: Intake/Shoot/ShotTtl/Storage/Climb を **ECS球に対して**機能化。
+  構造物コライダは可視FBXコライダから ECS静的ボックス334個を複製＝見た目と同位置で衝突（ユーザー確認済）。
+  新規 `EcsMechanics` が唯一の判定経路（旧 RobotIntake/Shooter/Climb/StorageTrigger は無効化）。ゲーム状態は GameObject 側
+  （RobotActor.HeldBalls/ClimbZone・wildfireの格納カウント）を更新＝ScoreBoard/HUDは不変のまま動く。切替`useEcsMechanics`(既定ON)。
+  **検証手順**は下記「次の一手」。
+- **段階⑤「試合/スコアのECS化」🟡実装完了＝Unity検証待ち**: タイマー/フェーズを真の `MatchSystem`(SystemBase)＋
+  `MatchStateData`シングルトンへ完全移行（旧MatchManagerは `useEcsMatch=false` でフォールバック温存）。スコアは ScoreBoard が算出し
+  `ScoreData`シングルトンへ公開（計算入力＝格納カウント/登攀がまだGameObject側のため計算は据置・結果のみECS化）。HUDはDirectorのアクセサ経由で
+  シングルトンを読む。MatchDirectorは Begin/Reset で `EcsMatchBridge` 経由に開始/リセット指示、Update で Finished をポーリングして OnFinish。
+- **段階⑥以降（未着手）**: ⑥VR/UI橋渡し(FgcEcsBootstrap)・Quest接続HMD確認 ⑦MLブリッジ ⑧旧PhysX撤去＋フィールドSubScene bake。
+  ※フィールド**構造物コライダのECS化**（ロボ/球が構造物と衝突）は計画ではSubScene bake方式で別途（段階⑧寄り）。現状ロボはECS床/壁＋球とのみ衝突＝構造物すり抜けは想定内。
+
+### ★必ず知っておくべき要点（ハマりどころ）
+1. **パッケージ版**: このエディタでは **entities/physics は 1.3.14 が上限**（1.4.20は無い）。**entities.graphics は不採用**（版不整合＋VR×SinglePassリスク回避）。球描画は`DrawMeshInstanced`継続。3つ揃える鉄則は graphics を入れないことで回避。
+2. **過渡的仕様（バグでない・ユーザー承認済）**: ECS球は GameObjectのロボ/フィールドと**別物理ワールド**なので、今は**球↔ロボ・球↔構造物が干渉しない**。段階③(ロボ)・④(フィールドコライダ)をECS化して同一ワールドに揃えば復活する。
+3. **切替フラグ**: `MatchDirector.useEcsBalls`(既定ON)。OFFで旧GameObject球(WildfireManager)へ即ロールバック。
+4. **検証のしかた**: 私(エージェント)はUnityをコンパイル/実行できない → **`C:\Users\genri\AppData\Local\Unity\Editor\Editor.log` を自分で読む**（ユーザーに貼付けを頼まない）。
+5. **新規アセンブリ**: `FGC.Sim.Shared`(運動学Burst版) / `FGC.Sim.ECS`(コンポーネント・将来System)。新コードは `Assets/FGC/Scripts/Sim/` 配下。
+
+### 次の一手（段階④の Unity 検証 ← 今ここ）
+段階③は検証済（コンパイル0＋Play稼働）。**段階④（判定機構のECS化）のコードは実装完了**＝Unity でのコンパイル＆挙動確認が残るのみ。
+1. **Unityをフォーカス**して再コンパイル（新規 `EcsMechanics.cs`＋`EcsBallSim`/`RobotActor`/`EcsRobotSim`/`MatchDirector` 変更を取込）。
+   `Editor.log` でエラー0を確認（私が読む）。新APIは無し（`Physics.OverlapBoxNonAlloc`・`EntityManager.Exists`・既存プール操作のみ）＝低リスク。
+2. `FGC > Build Field Scene`（既定で `Use Ecs Balls/Robots/Mechanics` 全ON）→ Play → SetupMenuで開始（or 学習シーンは autoBegin）。
+   期待挙動（✅条件＝旧一致）:
+   - **NPCが球を吸う**と `HeldBalls` が増える（満杯=10で停止）。
+   - 満杯ロボが**自陣SUPPRESSION/EXTINGUISHERゾーンに入ると格納カウントが増え、HUDのスコアが上がる**。
+   - **シュート**で撃った球がゴールゾーンに入ると得点化（撃った主の同盟一致をSUPPRESSIONは要求）。
+   - 球↔ロボ干渉（段階③）も継続。Profilerで Unity Physics がマルチコア分散。
+3. ロールバック: `Use Ecs Mechanics` OFF＝段階③（機構非機能）／`Use Ecs Robots` OFF＝段階②へ。各段独立に戻せる。
+
+#### 実装メモ（段階③④で作ったECS層）
+- **段階③ ロボ**: `EcsRobotSim`。ECS動的剛体 Box(0.5×0.486×0.5)・質量13.5・X/Z回転凍結(`InverseInertia.x/z=0`)・7mmクリアランス・
+  `PhysicsVelocity`直書きで旧ApplyDrive同値。駆動=`DriveKinematics`、指令=人間Gamepad/他は既存`RuleBasedNpcController`再利用。
+  GameObjectロボは `ExternallyDriven`＋`isKinematic` でシェル化しECS→Transform同期。各FixedUpdateで `SetLastCommand` も反映（機構用）。
+- **段階④ 機構**: `EcsMechanics`（唯一の判定経路）。Intake=口前方のECS球を空間クエリで回収/`HeldBalls++`、Shoot=`EcsBallSim.LaunchBall`で
+  ECS球射出＋飛来球追跡(ttl3s)、Storage=ロボ/飛来球のAABB判定→`wildfire.DepositToStorage`でカウント、Climb=`Physics.OverlapBox`でBRACE近接→`ClimbZone`。
+  **ゲーム状態は全てGameObject側（RobotActor/wildfireカウント）を更新＝ScoreBoard/HUD/MLは不変**。旧GO機構は MatchDirector が無効化。
+- `EcsBallSim` にプール操作API追加（`TryConsumeBallNear`/`LaunchBall`/`DespawnToPool`/`TryGetBallPosition`）＋放出をBallCountで打切り
+  （intake回収球の再放出を防止）。OnDestroyのEntityQuery.Dispose NREは `World.IsCreated` ガードで修正済（EcsBallSim/EcsRobotSim両方）。
+- **構造物コライダ（ユーザー報告「当たり判定ない」対応・2回目で確定）**: 当初FieldLayout推測座標の「シェル」を置いたが
+  **可視フィールド(実CAD FBX)と位置が一致せず**ロボがゴールをすり抜けた（切り分け: 球は押し出す＝ロボcoll効く／外周壁で止まる＝静的coll効く
+  →残る原因は位置ズレと断定）。**解決**: `MatchDirector.BuildEcsFieldColliders` が **可視フィールドのGameObjectコライダ(FBXのMeshCollider群)の
+  ワールドAABBから ECS静的ボックスを複製**（`EcsBallSim.AddStaticBox`）。ECS=Unity同座標なので**見た目と必ず同位置**で衝突。
+  除外: 巨大(maxDim>3m＝中央トラス全体/床/長い外周＝塞ぎ過ぎ) / 微小(<0.30m＝ボルト) / 極薄(y<0.05m＝床/テープ) / トリガ。
+  個々のトラス部材は別々のコライダなら格子状に残る（球は隙間を通る＝solid block化しない）。フラグ `useEcsStructureColliders`(既定ON)。
+  ※**[2026-06-09 修正] 斜め部材(ブレース)のすり抜けを解消**: 従来は `maxDim>3.0f` で除外していたため
+  **対角6.4mのブレースがECS物理ワールドにコライダを持たず、ECSロボ/球がすり抜けていた**（ユーザー報告「ブレースの当たり判定が無い」）。
+  対策＝巨大除外対象でも**細長部材(断面<0.5m＝パイプ/管/レール)は実メッシュ頂点からタイトなOBB(傾いた箱)を作って当たり判定を復活**
+  （`MatchDirector.TryMakeThinOrientedBox`＋`EcsBallSim.AddStaticBoxOriented`）。斜めにbakeされた頂点でも長軸を2点法で求めるので正確、
+  かつ細い箱なのでフィールドを塞がない。太い塊(ゴール背板/床/広い面=断面大)は従来通り除外して塞ぎ過ぎを防止。
+  **✅検証済(Editor.log 27814/27969行)**: `ECS静的ボックスを 342 個生成（うち斜め部材OBB 8 個）`＝従来334個から斜め部材8個(ブレース等)が追加され当たり判定が復活。コンパイル0・Play例外なし。
+  厳密形状は計画のSubScene bake方式（段階⑧寄り）で更に精緻化。
+  ★**[2026-06-09 修正済] 登攀判定のBRACE名不一致を解消**: 従来 `RobotClimb`/`EcsMechanics` は `name.StartsWith("brace")` でBRACEを探していたが、
+  実FBX部品名は「mesh#」「MAXTube…(REV-…)」で**"brace"を含まず登攀検出が機能していなかった**。対策＝新規 `BraceMarker` コンポーネントを
+  `MatchDirector.TagBraces` が**形状判定**(細長い断面&lt;0.5m・長軸&gt;3m・登攀高さ帯を斜めに跨ぐ＝世界minY&lt;0.6かつmaxY&gt;1.2)で対角の鋼管2本に付与し、
+  両登攀判定を `BraceMarker` 優先(旧 "brace" 名も後方互換で許容)に変更。これでロボがBRACE接触時に ClimbZone=Contact が入る（CLIMB倍率+0.05）。
+  ※差動2輪は実登攀しないので Z1/Z2/Z3 へは原則進まない（既述「実質Contact/None」＝想定内）。
+  **✅検証済(2026-06-09 Editor.log)**: `BRACE(登攀対象)を 8 個タグ付け`。診断ログで8個全てが**ブレース2基×各4管**(X≈4.88赤側/X≈2.12青側・Z≈3.7・長さ6.4m・|軸Y|≈0.26・Y帯0.25→2.01)と判明＝中央トラス等の誤検出は無し。コンパイル0。
+- 切替フラグ（MatchDirector・全既定ON）: `useEcsBalls`(②) / `useEcsRobots`(③) / `useEcsMechanics`(④) / `useEcsStructureColliders`(④補完)。上位OFFで下位は自動無効。
+
+### ユーザーの運用方針（重要・記憶にも保存済）
+- **操作・選択・確認を極力求めない**。妥当なデフォルトで自走し、淡々と事実を報告。手順依頼は最小化。
+- **HANDOFFは要所ごとに最新化し続ける**（この資料が常に現状＝再開の唯一の足場）。
+- 承認なしで自走してよい（bypassPermissions運用）。
+
+---
+
+## ★★★最新セッション（2026-06-09 午後・最重要・ここが最新）
+
+**到達点**: Unity 6.0 LTS（6000.0.76f1）で**コンパイルエラー0・Play稼働中**。
+当初のプリミティブ自動生成から **実CADフィールドモデルの取込** へ移行し、ゲームパッド認識まで確認。
+
+### ◆実CADフィールドの導入（プリミティブ→実寸モデル）
+- `FG26_F.step`(44MB, AP242) → OBJ化（`FG26_F/FG26_F.obj` 748MB ＋ `.mtl`）→
+  **`Assets/Models/Field/FG26_F_v001.fbx` として取込済み**。要件は `Assets/Models/Field/README_FBX要件.md`。
+- **`Assets/FGC/Editor/FieldModelPostprocessor.cs`**: 取込時にメッシュを Read/Write 有効化
+  （MeshCollider 生成に必須）等を自動設定する AssetPostprocessor。
+- **`Assets/FGC/Scripts/App/FieldColliders.cs`**: フィールド当たり判定の共有ロジック。
+  床=薄いBox、構造物=各メッシュに凹MeshCollider（最大辺 `colliderMinSize`=0.06m 未満の微小部品は除外）。
+
+### ◆フィールド当たり判定の方針（★この回で「精密コライダ」へ戻した）
+- `MatchDirector.ConfigureFieldColliders()` に「重い構造MeshCollider(約1612個)を実行時に無効化し
+  軽量Box(床+外周壁)へ置換する自動最適化」を実装していたが、**ユーザー指示で既定を精密側へ差し戻し**。
+- **`MatchDirector.useHeavyFieldColliders` の既定を `true`** に変更（= 精密MeshColliderをそのまま使う／形状忠実）。
+  - `false` にすると従来の軽量Box最適化（500球でフレームが重い場合の保険）に切替わる。コードは温存。
+  - 保存シーン `Assets/setting.unity` に本フラグはシリアライズされていない＝コード既定値が有効。
+- **要・性能再確認**: 精密コライダ＋500球でフレームが保てるか（重ければ球数を絞るか最適化ONに戻す）。
+
+### ◆現在の稼働状況（Editor.log 実測）
+- コンパイルエラー無し。`FGC > Build Field Scene` → Play で MatchDirector がフィールド生成→稼働。
+- ゲームパッド: USBデバイススキャン稼働中（REV PS4パッド入力系アクティブ）。
+- **VR未接続**: `Main Camera does not use a Tracked Pose Driver` 警告。Quest Link接続＋OpenXR有効化でのHMD表示確認はまだ。
+- マゼンタ問題は実モデル稼働により実質解消（色目視のみ残）。
+- ML-Agents は引き続き `FGC_MLAGENTS` トグルOFF（Sentis廃止問題、コード温存）。
+
+### ◆この回で触ったファイル（11:45以降）
+RobotActor / FieldLayout / RuleBasedNpcController / AllianceStationPlacer / MatchDirector /
+WildfireManager / SetupMenu / FieldSceneBuilder / FieldColliders / FieldModelPostprocessor / MaterialUtil。
+
+### ◆赤青ゴールの左右とプレイヤー視点（この回で修正）
+- **ゴールの左右が逆だった**のを修正。方針を「**赤=右(x大)/青=左(x小)＝各ロボ初期位置に近い側**」に統一
+  （PLAN.md「赤=x7側」と一致）。`FieldLayout.SuppressionRed/BlueCenter` と `FireShieldRed/BlueCenter` の
+  赤青を入替（NPCゴール・格納トリガもこの定数経由で自動追従）。関連コメントも全て赤=右へ修正。
+- **プレイヤー視点を「人間操縦ロボの初期位置の真後ろ」へ**（従来は辺の中央 z=3.5 固定）。
+  `AllianceStationPlacer` は `MatchConfig.HumanSlotIndex()` で操縦スロットを検出し、そのロボの z に合わせて
+  外側に立ち、フィールド横断方向（自ロボ正面→敵陣）を向く。`Place(rig, config)` にAPI変更（呼出2箇所更新）。
+- **操縦位置の左右変更も可**: 人間スロットを slot0/1/2(赤) or 3/4/5(青) に振り替えると、ロボ初期位置が
+  DOWN/MID/UP（z=1.432/2.800/4.168）へ移り、**視点もその真後ろへ自動追従**する。
+- **身長(eyeHeight)の起点を地上に修正**: 従来はリグ足元を y=0（RISER天面＝ロボ床）に置き身長を測っており、
+  「人間が嵩上げフィールドに立つ」誤り状態だった（`GroundRaise=0.70` は定義のみで未使用）。
+  `StationPosition` の足元 y を **−FieldConstants.GroundRaise(−0.70)＝観客床(地上)** に変更。
+  以後 eyeHeight は地上起点＝目線world y は −0.70+eyeHeight（ロボ床から見ると約 eyeHeight−0.70 の高さ）。
+
+### ◆ボール放出口を確定値で固定（この回）
+- 放出口 BallEmitPoint を**ユーザー確定値 (3.5, 0.15, 0.45)** に固定。
+  `FieldSceneBuilder.CreateWildfire()` と `WildfireManager.emitOrigin` 既定の両方に焼き込み済み
+  （「Build Field Scene」再生成でも常にこの位置）。実行時にコードが位置を上書きすることは無い。
+- 注意: `emitAnchor`(シーンのBallEmitPoint)があれば emitOrigin より優先。既存シーンに古い位置の
+  BallEmitPoint が残っている場合は、**Play終了→FGC > Build Field Scene で作り直す**か、Edit中に手動で同値へ。
+
+### ◆決定: 球の物理を DOTS/Unity Physics ハイブリッドへ（次の大改修・未着手）
+- **背景**: 現状 500球は標準PhysX＝CPUシングル寄りでボトルネック。GPUは描画のみで遊んでいる。
+  GPUパーティクル案は「個々の球をCPUで掴めない＝インテーク/格納/得点/堆積が崩壊」するため**不採用**
+  （装飾エフェクト専用ならGPUパーティクルも可）。
+- **採用方針（ユーザー合意 2026-06-09）**: **球だけ ECS + Unity Physics（Burst/Jobsでマルチコア=16C活用）** に載せる。
+  ロボ/VR/UI/フィールドは現状のGameObjectのまま、球↔GameObject間を橋渡しする**ハイブリッド**。全ECS化はしない（高リスク回避）。
+- **前提パッケージ（未導入）**: `com.unity.entities` `com.unity.physics` `com.unity.entities.graphics`
+  `com.unity.burst` `com.unity.collections` を manifest に追加。
+- **橋渡しが必要な既存接点**: WildfireManager(放出/プール/最寄り球) / RobotIntake(回収) / RobotShooter(射出) /
+  StorageTrigger(格納カウント) / ScoreBoard(得点)。球の位置・個体をECS↔CPUでやり取りする層を設計する。
+- **計画書**: `C:\Users\genri\.claude\plans\fancy-launching-umbrella.md`（全8段階・承認済み）。最終形=全ECS（VR/UI/エディタは橋渡し）。
+  方針: 段階移行 / Unity Physics(DOTS)剛体 / MLは #if FGC_MLAGENTS 橋渡し設計(現状OFF)。
+
+#### ECS移行 進捗
+- **段階①「土台」= ✅検証済み完了（EditModeテスト全緑＝コンパイル0）**:
+  - `Packages/manifest.json` に **entities 1.3.14 / physics 1.3.14** のみ追加（burst/collections/mathematicsは транзит解決）。
+    ★**重要な版の事実**: このエディタ(6000.0.76f1)では **entities/physics の上限が 1.3.x**（1.4.20はレジストリに無い＝not found）。
+    一方 entities.graphics は 1.3.14 が無く 1.4.20 しか出ない → **版が噛み合わない**。
+  - ★**entities.graphics は採用しない**（決定 2026-06-09）: 版不整合＋計画リスク#2(VR×Entities.Graphics×SinglePass)回避のため。
+    **球描画は既存 `Graphics.DrawMeshInstanced` を流用**し、ECS Entity の位置(LocalToWorld)から行列を作って描く折衷案。
+    球の**物理だけ**を Unity Physics(ECS)化＝マルチコアの目的は達成。FGC.Sim.ECS asmdef の Unity.Entities.Graphics 参照は除去済み。
+  - 新規 `Assets/FGC/Scripts/Sim/Shared/`（asmdef + `DriveKinematics.cs`）= 運動学の純数学・Burst安全版。
+  - 新規 `Assets/FGC/Scripts/Sim/ECS/`（asmdef + `EcsBootstrapSmoke.cs`）= Entities解決確認用の**無動作**System(Enabled=false)。
+  - `FGC.App.asmdef` に FGC.Sim.Shared/ECS 参照追加。`FGC.Tests.asmdef` に FGC.Sim.Shared 参照追加。
+  - **設計上の判断**: 計画の「DifferentialDriveModelを委譲」は Core→Shared の循環依存になるため不採用。
+    **Coreは不変**のまま `DriveKinematics` を独立実装し、`Tests/DriveKinematicsEquivalenceTests.cs` で**同値を担保**。
+  - **ユーザー検証(段階①の成功条件)**: Unityでパッケージ解決→**コンパイルエラー0**、Test Runner(EditMode)で
+    Core/Match/同値テストが**緑**、`FGC > Build Field Scene`→Play が**従来どおり**動く（ECSはまだ何もしない）。
+
+- **段階②「球のECS化」= ✅完了**（コンパイル成功・ECS球500生成・Unity Physics稼働。ユーザー確認済み）。
+  ※Editor.log上部の大量 entities.graphics エラー＋OverflowException は1.4.20を入れた一時状態の残骸（時系列で古い）。除去後にクリーン再コンパイル済み。
+  - **既知の過渡的仕様（ユーザー承認済み）**: ECS球は GameObject のロボ/フィールドと**別物理ワールド**のため、現状
+    **球↔ロボ・球↔構造物が干渉しない**（球はECS床/壁にのみ衝突）。これは段階③(ロボECS化)・④(フィールドコライダECS化)で
+    同一ワールドに揃えば復活する。バグではない。
+
+- **段階③「ロボのECS化」= ✅完了（検証済。Editor.logでコンパイル0＋Play稼働＋停止時NRE修正を確認）**:
+  - **実装ファイル**: `Sim/ECS/BallComponents.cs` に `SimRobotTag` 追加 / **新規 `App/EcsRobotSim.cs`**（6ロボをECS動的剛体生成・
+    FixedUpdateで指令算出→`DriveKinematics`→`PhysicsVelocity`直書き・LateUpdateでECS→GameObject Transform同期・最寄り球はECS球クエリ）/
+    `Robot/RobotActor.cs` に `ExternallyDriven` ゲート追加 / `App/MatchDirector.cs` に `useEcsRobots`(既定OFF)＋`StartEcsRobots`
+    （GameObjectロボを kinematic＋ExternallyDriven 化）＋Begin/Finish/ResetでのSetActive結線。asmdef変更不要（App は既に必要参照を保持）。
+  - 目的: ロボを ECS Unity Physics 剛体にして球と同じワールドに入れ、**球↔ロボ干渉を復活**。
+  - 設計: Robot Entity(Box0.5³・X/Z回転凍結=慣性テンソル0・PhysicsVelocity直書きで旧アーケード速度制御を同値再現)、
+    DriveCommandData、DifferentialDriveSystem(=FGC.Sim.Shared.DriveKinematics をJob/Systemで適用)、
+    NPC則をSystem化(RuleBasedNpcController移植: KP=6/MaxΩ=3/巡航0.7/IntakeRange0.35)、人間スロットはGamepad入力、
+    観測は最寄り球をECS球クエリで算出。描画は可視cubeをECS→GameObject同期 or DrawMeshInstanced。
+  - 注意: 機構(Intake/Shoot/Climb)は段階④まで非機能のまま（GameObject側に残置）。ロボ可視化と物理の二重管理に注意。
+  - ★**要件(ユーザー指示・後で適用OK)**: 「ロボにとって床から7mm以下の干渉物は無視」。
+    実装方針: ロボのコライダ底面に **7mmグランドクリアランス**（box底面を y=0.007 に＝床から7mm浮かせる）を与え、
+    高さ≤7mmの微小干渉物（テープ/継ぎ目/微小段差/薄い破片等）はロボ下をすり抜ける。球(φ100)・本来の構造物は従来どおり当たる。
+    段階③のロボEntity生成時、box高さを 0.5→0.493 にし中心を上げる等で実現。
+  - 新規 `Assets/FGC/Scripts/Sim/ECS/BallComponents.cs`（`BallTag`/`SimStaticColliderTag`）。
+  - 新規 `Assets/FGC/Scripts/App/EcsBallSim.cs`（MonoBehaviour）= ECS球500(Disabledプール)＋ECS静的床/外周壁を
+    EntityManagerで生成、FixedUpdateで放出(pour)、LateUpdateで `Graphics.DrawMeshInstanced` 描画。
+    物理は Unity Physics のSystem群(内部Burst)が担当＝マルチコア。値は FieldConstants/FieldLayout 流用。
+  - `MatchDirector` に `useEcsBalls`(既定ON) を追加。ON時は WildfireManager の Prepare/EmitAll を呼ばず
+    `EcsBallSim.Begin()` を起動（放出点/メッシュ/色は wildfire の設定 emitAnchor優先 を流用）。ResetMatchも分岐。
+  - `FGC.App.asmdef` に Unity.Entities/Physics/Transforms/Mathematics/Collections 参照追加。
+  - **重要な設計事実**: ECS物理ワールドは GameObject の MeshCollider と衝突しない → 球が落ちる床/壁をECSで別途生成。
+    フィールド本体コライダのECS移行は段階④/⑧。この段階は「球が放出され押し出し/堆積/こぼれる」物理のみ検証。
+  - **未検証リスク(Entities 1.3 API)**: PhysicsMass.CreateDynamic / PhysicsWorldIndex / SetEnabled / SphereCollider.Create 等の
+    具体シグネチャはこちらでコンパイル検証不可。エラーが出たら文面で調整。
+  - **ロールバック**: MatchDirector の `useEcsBalls` を OFF にすれば旧 WildfireManager 球へ即復帰。
+  - **ユーザー検証(段階②成功条件)**: コンパイル0 → Play → 球がECSで放出され**球同士が押し合い・堆積・こぼれる**、
+    Profiler(Window>Analysis>Profiler)でUnity Physics系がワーカースレッドに分散(マルチコア)。フレーム許容内。
+
+### ◆次にやること
+1. **VR/Quest接続**でHMD表示確認（Tracked Pose Driver / OpenXR有効化）。
+2. **精密コライダ＋500球の性能確認**（重ければ `useHeavyFieldColliders=false` で軽量Boxに戻す）。
+3. 挙動確認: 球放出・NPC移動・スコア加算・タイマー。
+4. フィールド外観図と FieldLayout / FBX取込向き(`fieldEuler`/`fieldScale`)の照合。
 
 ---
 

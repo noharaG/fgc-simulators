@@ -1,44 +1,49 @@
 using FGC.Core;
+using FGC.Match;
 using UnityEngine;
 
 namespace FGC.VR
 {
     /// <summary>
     /// 同盟選択に応じて選手の立ち位置・向きを算出する（PLAN.md §3.7）。
-    /// **CAD準拠: 赤=左(x=0側) / 青=右(x=7側)**（STEP実測 ALLIANCE_TAPE 位置・FieldLayout参照）。
-    /// ALLIANCE STATION はフィールド端の外側（FieldLayout.StationStandOffset）。選手は中央を向く（外から目視操作）。
+    /// **赤=右(x=7側) / 青=左(x=0側)**（ロボ初期位置と同じ側・FieldLayout参照）。
+    /// ALLIANCE STATION はフィールド端の外側（FieldLayout.StationStandOffset）。
+    /// 立ち位置は**人間操縦ロボの初期位置の真後ろ**（同じ奥行きz）。正面（フィールド横断方向）を向く（外から目視操作）。
     /// </summary>
     public static class AllianceStationPlacer
     {
         /// <summary>
         /// 同盟の立ち位置（フィールド外側）を返す。standOffset はレールからの後退距離[m]。
-        /// 現状は左右辺の中央(z=3.5)に立つ。※CAD実測ではHUMAN_PLAYER_STATION(=FIRE_SHIELD)が奥(z≈6.4)に
-        ///   あり、ドライバーは自陣FIRE_SHIELD付近(FieldLayout.FireShieldRed/BlueCenter)に立つのが本来かもしれない。
-        ///   外観図/Game Manualで確認し、必要なら z を FireShield 側へ寄せる（朝の確認事項）。
+        /// 奥行き z は**人間操縦ロボ(humanSlot)の初期位置と同じ**にして、自ロボが正面に来る（＝ロボの真後ろに立つ）。
+        /// humanSlot を変えれば視点もそのロボ（DOWN/MID/UP=左/真ん中/右 等）の真後ろへ自動追従する。
+        /// 足元 y は**観客床（地上）= RISER天面より GroundRaise(0.70m) 下**。身長(eyeHeight)はこの地上を起点に測る。
         /// </summary>
-        public static Vector3 StationPosition(AllianceColor alliance, float standOffset = FieldLayout.StationStandOffset)
+        public static Vector3 StationPosition(AllianceColor alliance, int humanSlot, float standOffset = FieldLayout.StationStandOffset)
         {
-            float z = FieldConstants.FieldSizeZ * 0.5f; // 辺の中央（要確認: FIRE_SHIELD奥側 z≈6.4 かも）
+            float z = FieldLayout.RobotStart(humanSlot, alliance).z; // 人間ロボ初期位置の真後ろ
+            float y = -FieldConstants.GroundRaise; // 観客床（地上）。フィールドは70cm嵩上げ＝ロボ床はy0なので足元は−0.70
             // ロボ配置に合わせる: 赤=右(x=7)側の外 / 青=左(x=0)側の外
             if (alliance == AllianceColor.Red)
-                return new Vector3(FieldConstants.FieldSizeX + standOffset, 0f, z);   // 赤=x7側の外（右）
-            return new Vector3(-standOffset, 0f, z);                                  // 青=x0側の外（左）
+                return new Vector3(FieldConstants.FieldSizeX + standOffset, y, z);   // 赤=x7側の外（右）
+            return new Vector3(-standOffset, y, z);                                  // 青=x0側の外（左）
         }
 
-        /// <summary>フィールド中央を向く回転。</summary>
-        public static Quaternion StationRotation(AllianceColor alliance)
+        /// <summary>フィールドを横断する方向（自ロボ正面・敵陣方向）を向く回転。z はロボと同じなので真正面に自ロボが来る。</summary>
+        public static Quaternion StationRotation(AllianceColor alliance, int humanSlot)
         {
-            Vector3 pos = StationPosition(alliance);
-            Vector3 center = new Vector3(FieldConstants.FieldSizeX * 0.5f, 0f, FieldConstants.FieldSizeZ * 0.5f);
-            Vector3 dir = center - pos; dir.y = 0f;
+            Vector3 pos = StationPosition(alliance, humanSlot);
+            // z は保ったまま、反対側(x)へまっすぐ向く＝自ロボが視界の真ん中、その先に敵陣。
+            Vector3 dir = new Vector3(FieldConstants.FieldSizeX * 0.5f - pos.x, 0f, 0f);
             return Quaternion.LookRotation(dir.normalized, Vector3.up);
         }
 
-        /// <summary>リグを同盟ステーションへ配置（位置＋向き）。</summary>
-        public static void Place(VrPlayerRig rig, AllianceColor alliance)
+        /// <summary>リグを同盟ステーションへ配置（位置＋向き）。操縦ロボの真後ろに立つ。</summary>
+        public static void Place(VrPlayerRig rig, MatchConfig config)
         {
-            if (rig == null) return;
-            rig.PlaceAt(StationPosition(alliance), StationRotation(alliance));
+            if (rig == null || config == null) return;
+            var alliance = config.PlayerAlliance;
+            int humanSlot = config.HumanSlotIndex();
+            rig.PlaceAt(StationPosition(alliance, humanSlot), StationRotation(alliance, humanSlot));
         }
     }
 }

@@ -28,32 +28,26 @@ namespace FGC.App
             if (!visible || director == null) return;
             EnsureStyles();
 
-            var match = director.Match;
-            var score = director.Score;
-
+            // 段階⑤: タイマー/フェーズ/スコアは MatchDirector のアクセサ経由（ECS時はシングルトン・OFF時は旧Manager）。
             // 残時間・フェーズ（上部中央）
-            float remaining = match != null ? match.Remaining : FieldConstants.MatchDuration;
+            float remaining = director.HudRemaining;
             int mm = Mathf.FloorToInt(remaining / 60f);
             int ss = Mathf.FloorToInt(remaining % 60f);
-            string phase = match != null ? PhaseLabel(match.Phase) : "";
+            string phase = PhaseLabel(director.HudPhase);
 
             float cx = Screen.width * 0.5f;
             GUI.Label(new Rect(cx - 120, 8, 240, 40), $"{mm:0}:{ss:00}   {phase}", _big);
 
             // スコア（左=赤 / 右=青）
-            int red = score != null ? score.RedRegional : 0;
-            int blue = score != null ? score.BlueRegional : 0;
             var prevColor = GUI.color;
             GUI.color = new Color(1f, 0.4f, 0.4f);
-            GUI.Label(new Rect(20, 8, 200, 40), $"RED {red}", _big);
+            GUI.Label(new Rect(20, 8, 200, 40), $"RED {director.HudRed}", _big);
             GUI.color = new Color(0.4f, 0.6f, 1f);
-            GUI.Label(new Rect(Screen.width - 220, 8, 200, 40), $"BLUE {blue}", _big);
+            GUI.Label(new Rect(Screen.width - 220, 8, 200, 40), $"BLUE {director.HudBlue}", _big);
             GUI.color = prevColor;
 
-            // 補足（COOPERTITION・球の状況）
-            if (score != null)
-                GUI.Label(new Rect(cx - 120, 48, 240, 22),
-                    $"COOP +{score.CoopertitionGlobal}", _label);
+            // 補足（COOPERTITION）
+            GUI.Label(new Rect(cx - 120, 48, 240, 22), $"COOP +{director.HudCoop}", _label);
         }
 
         private static string PhaseLabel(MatchPhase p)

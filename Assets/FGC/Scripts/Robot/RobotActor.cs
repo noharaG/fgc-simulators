@@ -23,6 +23,12 @@ namespace FGC.Robot
         /// <summary>試合フェーズ中のみ true。準備フェーズ／試合終了後は false で駆動・機構を停止し待機する。</summary>
         public bool Active { get; set; }
 
+        /// <summary>
+        /// 段階③: 物理駆動を外部(ECS=EcsRobotSim)へ委譲しているか。true のとき本クラスは Rigidbody を一切
+        /// 動かさず（位置/速度はECSが決め、Transformは外部が同期）、二重駆動を避ける。可視/機構/観測のシェルとして残る。
+        /// </summary>
+        public bool ExternallyDriven { get; set; }
+
         private Rigidbody _rb;
         private DifferentialDriveModel _drive;
 
@@ -34,6 +40,10 @@ namespace FGC.Robot
 
         /// <summary>直近フレームで Controller が返した指令（機構コンポーネントが参照）。</summary>
         public DriveCommand LastCommand { get; private set; } = DriveCommand.Zero;
+
+        /// <summary>段階③④: 外部駆動(ECS=EcsRobotSim)時に算出した指令を機構へ伝える。
+        /// ExternallyDriven 中は本体FixedUpdateが走らず LastCommand が更新されないため、ECS側がこれで設定する。</summary>
+        public void SetLastCommand(DriveCommand cmd) => LastCommand = cmd;
 
         private void Awake()
         {
@@ -57,6 +67,9 @@ namespace FGC.Robot
         private void FixedUpdate()
         {
             if (_drive == null || _rb == null) EnsureInit();
+
+            // 段階③: 物理をECSへ委譲中は本体は何もしない（EcsRobotSim が駆動＋Transform同期）。
+            if (ExternallyDriven) return;
 
             float dt = Time.fixedDeltaTime;
 

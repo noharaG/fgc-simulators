@@ -82,9 +82,9 @@ namespace FGC.Editor
         {
             var go = new GameObject("WildfireManager");
             var wf = go.AddComponent<WildfireManager>();
-            // 球はゴールのスロットから放出。位置は可視アンカー(BallEmitPoint)で指定し、
-            // Sceneビューで実機スロットの開口にドラッグして合わせられるようにする。
-            wf.emitOrigin = new Vector3(FieldLayout.ExtinguisherCenter.x, 0.5f, FieldLayout.ExtinguisherCenter.z);
+            // 球はゴールのスロットから放出。位置は可視アンカー(BallEmitPoint)で指定。
+            // ★ユーザー確定値 (3.5, 0.15, 0.45) で固定（2026-06-09 実機調整済み。Sceneで微調整したい時のみ動かす）。
+            wf.emitOrigin = new Vector3(3.5f, 0.15f, 0.45f);
             var anchor = new GameObject("BallEmitPoint");
             anchor.transform.SetParent(go.transform, false);
             anchor.transform.position = wf.emitOrigin;
@@ -108,6 +108,9 @@ namespace FGC.Editor
             camGo.transform.SetParent(offsetGo.transform, false);
             var cam = camGo.AddComponent<Camera>();
             camGo.AddComponent<AudioListener>();
+            // 段階⑥: センターアイ姿勢の TrackedPoseDriver(Input System) を焼き込み時に付与。
+            // XROrigin.Awake が「Tracked Pose Driver が無い」警告を出す前に存在させるためここで設定する。
+            VrPlayerRig.ConfigureHeadTracking(cam);
 
             origin.Camera = cam;
             origin.CameraFloorOffsetObject = offsetGo;

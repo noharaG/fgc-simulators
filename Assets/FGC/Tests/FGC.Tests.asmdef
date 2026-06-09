@@ -4,6 +4,7 @@
   "references": [
     "FGC.Core",
     "FGC.Match",
+    "FGC.Sim.Shared",
     "UnityEngine.TestRunner",
     "UnityEditor.TestRunner"
   ],

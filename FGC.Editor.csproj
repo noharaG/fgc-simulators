@@ -43,13 +43,26 @@
     <UnityVersion>6000.0.76f1</UnityVersion>
   </PropertyGroup>
   <ItemGroup>
+    <Analyzer Include="C:\Users\genri\.vscode\extensions\visualstudiotoolsforunity.vstuc-1.2.2\Analyzers\Microsoft.Unity.Analyzers.dll" />
     <Analyzer Include="C:\Program Files\Unity\Hub\Editor\6000.0.76f1\Editor\Data\Tools\Unity.SourceGenerators\Unity.SourceGenerators.dll" />
     <Analyzer Include="C:\Program Files\Unity\Hub\Editor\6000.0.76f1\Editor\Data\Tools\Unity.SourceGenerators\Unity.Properties.SourceGenerator.dll" />
     <Analyzer Include="C:\Program Files\Unity\Hub\Editor\6000.0.76f1\Editor\Data\Tools\Unity.SourceGenerators\Unity.UIToolkit.SourceGenerator.dll" />
+    <Analyzer Include="C:\Users\genri\Desktop\FGCシミュレーターレベルマックス\Library\PackageCache\com.unity.entities@e581b903be8e\Unity.Entities\SourceGenerators\AspectGenerator.dll" />
+    <Analyzer Include="C:\Users\genri\Desktop\FGCシミュレーターレベルマックス\Library\PackageCache\com.unity.entities@e581b903be8e\Unity.Entities\SourceGenerators\JobEntityGenerator.dll" />
+    <Analyzer Include="C:\Users\genri\Desktop\FGCシミュレーターレベルマックス\Library\PackageCache\com.unity.entities@e581b903be8e\Unity.Entities\SourceGenerators\SystemGenerator.dll" />
+    <Analyzer Include="C:\Users\genri\Desktop\FGCシミュレーターレベルマックス\Library\PackageCache\com.unity.entities@e581b903be8e\Unity.Entities\SourceGenerators\Unity.Entities.Analyzer.dll" />
+    <Analyzer Include="C:\Users\genri\Desktop\FGCシミュレーターレベルマックス\Library\PackageCache\com.unity.entities@e581b903be8e\Unity.Entities\SourceGenerators\SystemGenerator.LambdaJobs.dll" />
+    <Analyzer Include="C:\Users\genri\Desktop\FGCシミュレーターレベルマックス\Library\PackageCache\com.unity.entities@e581b903be8e\Unity.Entities\SourceGenerators\SystemGenerator.SystemAPI.QueryBuilder.dll" />
+    <Analyzer Include="C:\Users\genri\Desktop\FGCシミュレーターレベルマックス\Library\PackageCache\com.unity.entities@e581b903be8e\Unity.Entities\SourceGenerators\SystemGenerator.SystemAPI.dll" />
+    <Analyzer Include="C:\Users\genri\Desktop\FGCシミュレーターレベルマックス\Library\PackageCache\com.unity.entities@e581b903be8e\Unity.Entities\SourceGenerators\SystemGenerator.SystemAPI.Query.dll" />
+    <Analyzer Include="C:\Users\genri\Desktop\FGCシミュレーターレベルマックス\Library\PackageCache\com.unity.entities@e581b903be8e\Unity.Entities\SourceGenerators\SystemGenerator.Common.dll" />
+    <Analyzer Include="C:\Users\genri\Desktop\FGCシミュレーターレベルマックス\Library\PackageCache\com.unity.entities@e581b903be8e\Unity.Entities\SourceGenerators\Common.dll" />
+    <Analyzer Include="C:\Users\genri\Desktop\FGCシミュレーターレベルマックス\Library\PackageCache\com.unity.entities@e581b903be8e\Unity.Entities\SourceGenerators\SystemGenerator.EntityQueryBulkOperations.dll" />
+    <Analyzer Include="C:\Users\genri\Desktop\FGCシミュレーターレベルマックス\Library\PackageCache\com.unity.entities@e581b903be8e\Unity.Entities\SourceGenerators\Unity.Entities.Analyzer.CodeFixes.dll" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Assets\FGC\Editor\FieldModelPostprocessor.cs" />
     <Compile Include="Assets\FGC\Editor\FieldSceneBuilder.cs" />
+    <Compile Include="Assets\FGC\Editor\FieldModelPostprocessor.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Assets\FGC\Editor\FGC.Editor.asmdef" />
@@ -557,6 +570,10 @@
     </Reference>
     <Reference Include="TextMateSharpPlastic.Grammars">
       <HintPath>Library\PackageCache\com.unity.collab-proxy@0b1559bcd34e\Lib\Editor\TextMateSharp\TextMateSharpPlastic.Grammars.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Unity.Cecil.Awesome">
+      <HintPath>Library\PackageCache\com.unity.entities@e581b903be8e\Unity.Entities.CodeGen\Unity.Cecil.Awesome.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Unity.Collections.LowLevel.ILSupport">

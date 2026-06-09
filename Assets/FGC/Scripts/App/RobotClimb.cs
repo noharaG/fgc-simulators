@@ -50,8 +50,10 @@ namespace FGC.App
 
         private static bool IsBrace(Collider col)
         {
-            // FieldBuilder が brace を id "brace_*" の名前で生成している前提。
-            return col != null && col.gameObject.name.StartsWith("brace");
+            if (col == null) return false;
+            // 実CAD FBX は "brace" 名でないため BraceMarker(MatchDirector.TagBraces が形状判定で付与)を優先。
+            // 旧 FieldBuilder の "brace_*" プリミティブ名も後方互換で許容。
+            return col.GetComponentInParent<BraceMarker>() != null || col.gameObject.name.StartsWith("brace");
         }
 
         private static ClimbZone ZoneForHeight(float y)

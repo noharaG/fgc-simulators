@@ -43,18 +43,36 @@
     <UnityVersion>6000.0.76f1</UnityVersion>
   </PropertyGroup>
   <ItemGroup>
+    <Analyzer Include="C:\Users\genri\.vscode\extensions\visualstudiotoolsforunity.vstuc-1.2.2\Analyzers\Microsoft.Unity.Analyzers.dll" />
     <Analyzer Include="C:\Program Files\Unity\Hub\Editor\6000.0.76f1\Editor\Data\Tools\Unity.SourceGenerators\Unity.SourceGenerators.dll" />
     <Analyzer Include="C:\Program Files\Unity\Hub\Editor\6000.0.76f1\Editor\Data\Tools\Unity.SourceGenerators\Unity.Properties.SourceGenerator.dll" />
     <Analyzer Include="C:\Program Files\Unity\Hub\Editor\6000.0.76f1\Editor\Data\Tools\Unity.SourceGenerators\Unity.UIToolkit.SourceGenerator.dll" />
+    <Analyzer Include="C:\Users\genri\Desktop\FGCシミュレーターレベルマックス\Library\PackageCache\com.unity.entities@e581b903be8e\Unity.Entities\SourceGenerators\AspectGenerator.dll" />
+    <Analyzer Include="C:\Users\genri\Desktop\FGCシミュレーターレベルマックス\Library\PackageCache\com.unity.entities@e581b903be8e\Unity.Entities\SourceGenerators\JobEntityGenerator.dll" />
+    <Analyzer Include="C:\Users\genri\Desktop\FGCシミュレーターレベルマックス\Library\PackageCache\com.unity.entities@e581b903be8e\Unity.Entities\SourceGenerators\SystemGenerator.dll" />
+    <Analyzer Include="C:\Users\genri\Desktop\FGCシミュレーターレベルマックス\Library\PackageCache\com.unity.entities@e581b903be8e\Unity.Entities\SourceGenerators\Unity.Entities.Analyzer.dll" />
+    <Analyzer Include="C:\Users\genri\Desktop\FGCシミュレーターレベルマックス\Library\PackageCache\com.unity.entities@e581b903be8e\Unity.Entities\SourceGenerators\SystemGenerator.LambdaJobs.dll" />
+    <Analyzer Include="C:\Users\genri\Desktop\FGCシミュレーターレベルマックス\Library\PackageCache\com.unity.entities@e581b903be8e\Unity.Entities\SourceGenerators\SystemGenerator.SystemAPI.QueryBuilder.dll" />
+    <Analyzer Include="C:\Users\genri\Desktop\FGCシミュレーターレベルマックス\Library\PackageCache\com.unity.entities@e581b903be8e\Unity.Entities\SourceGenerators\SystemGenerator.SystemAPI.dll" />
+    <Analyzer Include="C:\Users\genri\Desktop\FGCシミュレーターレベルマックス\Library\PackageCache\com.unity.entities@e581b903be8e\Unity.Entities\SourceGenerators\SystemGenerator.SystemAPI.Query.dll" />
+    <Analyzer Include="C:\Users\genri\Desktop\FGCシミュレーターレベルマックス\Library\PackageCache\com.unity.entities@e581b903be8e\Unity.Entities\SourceGenerators\SystemGenerator.Common.dll" />
+    <Analyzer Include="C:\Users\genri\Desktop\FGCシミュレーターレベルマックス\Library\PackageCache\com.unity.entities@e581b903be8e\Unity.Entities\SourceGenerators\Common.dll" />
+    <Analyzer Include="C:\Users\genri\Desktop\FGCシミュレーターレベルマックス\Library\PackageCache\com.unity.entities@e581b903be8e\Unity.Entities\SourceGenerators\SystemGenerator.EntityQueryBulkOperations.dll" />
+    <Analyzer Include="C:\Users\genri\Desktop\FGCシミュレーターレベルマックス\Library\PackageCache\com.unity.entities@e581b903be8e\Unity.Entities\SourceGenerators\Unity.Entities.Analyzer.CodeFixes.dll" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Assets\FGC\Scripts\App\RobotShooter.cs" />
+    <Compile Include="Assets\FGC\Scripts\App\EcsMechanics.cs" />
+    <Compile Include="Assets\FGC\Scripts\App\EcsMatchBridge.cs" />
+    <Compile Include="Assets\FGC\Scripts\App\ShotBall.cs" />
+    <Compile Include="Assets\FGC\Scripts\App\BraceMarker.cs" />
+    <Compile Include="Assets\FGC\Scripts\App\EcsBallSim.cs" />
+    <Compile Include="Assets\FGC\Scripts\App\MatchDirector.cs" />
+    <Compile Include="Assets\FGC\Scripts\App\EcsRobotSim.cs" />
     <Compile Include="Assets\FGC\Scripts\App\StorageTrigger.cs" />
     <Compile Include="Assets\FGC\Scripts\App\ScoreBoard.cs" />
-    <Compile Include="Assets\FGC\Scripts\App\RobotShooter.cs" />
     <Compile Include="Assets\FGC\Scripts\App\RobotIntake.cs" />
     <Compile Include="Assets\FGC\Scripts\App\FieldColliders.cs" />
-    <Compile Include="Assets\FGC\Scripts\App\ShotBall.cs" />
-    <Compile Include="Assets\FGC\Scripts\App\MatchDirector.cs" />
     <Compile Include="Assets\FGC\Scripts\App\RewardShaper.cs" />
     <Compile Include="Assets\FGC\Scripts\App\MatchHud.cs" />
     <Compile Include="Assets\FGC\Scripts\App\RobotClimb.cs" />
@@ -73,6 +91,10 @@
     </Reference>
     <Reference Include="UnityEngine.AndroidJNIModule">
       <HintPath>C:\Program Files\Unity\Hub\Editor\6000.0.76f1\Editor\Data\Managed\UnityEngine\UnityEngine.AndroidJNIModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine.AssetBundleModule">
+      <HintPath>C:\Program Files\Unity\Hub\Editor\6000.0.76f1\Editor\Data\Managed\UnityEngine\UnityEngine.AssetBundleModule.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.AudioModule">
@@ -243,6 +265,10 @@
       <HintPath>C:\Program Files\Unity\Hub\Editor\6000.0.76f1\Editor\Data\Managed\UnityEngine\UnityEngine.UIElementsModule.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="UnityEngine.UnityAnalyticsModule">
+      <HintPath>C:\Program Files\Unity\Hub\Editor\6000.0.76f1\Editor\Data\Managed\UnityEngine\UnityEngine.UnityAnalyticsModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="UnityEngine.UnityAnalyticsCommonModule">
       <HintPath>C:\Program Files\Unity\Hub\Editor\6000.0.76f1\Editor\Data\Managed\UnityEngine\UnityEngine.UnityAnalyticsCommonModule.dll</HintPath>
       <Private>False</Private>
@@ -261,6 +287,10 @@
     </Reference>
     <Reference Include="UnityEngine.UnityTestProtocolModule">
       <HintPath>C:\Program Files\Unity\Hub\Editor\6000.0.76f1\Editor\Data\Managed\UnityEngine\UnityEngine.UnityTestProtocolModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UnityWebRequestModule">
+      <HintPath>C:\Program Files\Unity\Hub\Editor\6000.0.76f1\Editor\Data\Managed\UnityEngine\UnityEngine.UnityWebRequestModule.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.VFXModule">
@@ -473,6 +503,10 @@
     </Reference>
     <Reference Include="TextMateSharpPlastic.Grammars">
       <HintPath>Library\PackageCache\com.unity.collab-proxy@0b1559bcd34e\Lib\Editor\TextMateSharp\TextMateSharpPlastic.Grammars.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Unity.Cecil.Awesome">
+      <HintPath>Library\PackageCache\com.unity.entities@e581b903be8e\Unity.Entities.CodeGen\Unity.Cecil.Awesome.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Unity.Collections.LowLevel.ILSupport">
@@ -1007,6 +1041,26 @@
       <HintPath>C:\Program Files\Unity\Hub\Editor\6000.0.76f1\Editor\Data\NetStandard\compat\2.1.0\shims\netfx\System.Xml.Serialization.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="Unity.Entities">
+      <HintPath>Library\ScriptAssemblies\Unity.Entities.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Unity.Physics">
+      <HintPath>Library\ScriptAssemblies\Unity.Physics.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Unity.Transforms">
+      <HintPath>Library\ScriptAssemblies\Unity.Transforms.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Unity.Mathematics">
+      <HintPath>Library\ScriptAssemblies\Unity.Mathematics.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Unity.Collections">
+      <HintPath>Library\ScriptAssemblies\Unity.Collections.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="UnityEditor.UI">
       <HintPath>Library\ScriptAssemblies\UnityEditor.UI.dll</HintPath>
       <Private>False</Private>
@@ -1024,6 +1078,8 @@
     <ProjectReference Include="FGC.Input.csproj" />
     <ProjectReference Include="FGC.VR.csproj" />
     <ProjectReference Include="FGC.UI.csproj" />
+    <ProjectReference Include="FGC.Sim.Shared.csproj" />
+    <ProjectReference Include="FGC.Sim.ECS.csproj" />
   </ItemGroup>
   <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
   <ItemGroup>

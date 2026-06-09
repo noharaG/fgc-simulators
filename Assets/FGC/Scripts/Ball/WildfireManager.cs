@@ -17,8 +17,9 @@ namespace FGC.Ball
         public Material ballMaterial;    // GPU Instancing有効マテリアル
 
         [Header("放出口（EXTINGUISHER下）")]
-        // 既定はEXTINGUISHER中央(STEP実測 z≈3.384)下部開口。シーン生成側で FieldLayout から上書きされる。
-        public Vector3 emitOrigin = new Vector3(3.5f, 0.4f, 3.384f);
+        // ★ユーザー確定値 (3.5, 0.15, 0.45) で固定（2026-06-09 実機調整済み）。
+        // emitAnchor(BallEmitPoint) があればそちらが優先。FieldSceneBuilder が同値で生成する。
+        public Vector3 emitOrigin = new Vector3(3.5f, 0.15f, 0.45f);
         [Tooltip("放出口の位置をシーン上のオブジェクトで指定（ゴールのスロットにこれをドラッグして合わせる）。未設定なら emitOrigin を使う。")]
         public Transform emitAnchor;
 

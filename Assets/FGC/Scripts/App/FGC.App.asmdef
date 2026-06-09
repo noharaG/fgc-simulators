@@ -9,7 +9,14 @@
     "FGC.Match",
     "FGC.Input",
     "FGC.VR",
-    "FGC.UI"
+    "FGC.UI",
+    "FGC.Sim.Shared",
+    "FGC.Sim.ECS",
+    "Unity.Entities",
+    "Unity.Physics",
+    "Unity.Transforms",
+    "Unity.Mathematics",
+    "Unity.Collections"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],
