@@ -21,8 +21,14 @@
   - **真の blocker = Unity側 `com.unity.ml-agents` が `Unity.Sentis` 依存**。Sentis→Inference Engine改称で旧ml-agents 3.0.0 はコンパイル不能。
   - **Web調査(2026-06)結果**: Unity 6対応の新しい com.unity.ml-agents が Inference Engine を使う形で存在する（Barracuda廃止→Sentis/Inference Engine 1.2系へ）。ただし Unity 6.3 で onnx インポータ競合の既知問題あり。
     → **方針**: manifestへ「Unity 6.0で解決可能な com.unity.ml-agents の版」を追加し、Inference Engine(com.unity.ai.inference)で解決させる。**ただし検証不能なまま本体manifestを壊すと全projectがコンパイル不能になるため慎重に**（変更後 Editor.log で版解決とコンパイルを確認→失敗なら即revert）。
-  - **着手**: Python 3.10 を winget でバックグラウンド導入開始（ジョブ bvyp6e6p6）。完了後 venv＋mlagents を構築（Unity非依存・安全）。
-- **[次] Unity側ML再有効化**: ①Python3.10 venv完成を確認 → ②manifestに ml-agents(Unity6解決版)追加 → Editor.logで版解決＋コンパイル確認(失敗ならrevert) → ③`FGC.ML.asmdef` defineConstraints・`FGC.App`参照・Player Settings の Scripting Define に `FGC_MLAGENTS` 復元 → ④`FGC > Build Training Scene` → `ml/train.ps1` で学習開始。
+  - **✅ Python学習環境 完成・GPU検証済(00:30)**: `ml/.venv310`（Python3.10.11）に **torch 2.5.1+cu121 / CUDA=True / RTX 4070 Laptop / mlagents 1.1.0(+mlagents-envs 1.1.0, onnx 1.15, protobuf 3.20.3, numpy 1.23.5)**。`mlagents-learn.exe --help` 動作OK。
+    ※`ml/setup_env.ps1` は **日本語がWindows PowerShell5.1で文字化け→構文エラー**(UTF-8 BOM無し問題)で失敗するため、**.ps1を介さず同等コマンドを直接実行して構築**した。setup_env.ps1/train.ps1 は要BOM修正 or 直接実行。
+  - **残blocker = Unity側 `com.unity.ml-agents`**: Python mlagents は **1.1.0**＝対応Unity版は **com.unity.ml-agents 3.0.0(Release 21)**。これが `Unity.Sentis` 依存で本エディタ(6000.0.76)ではコンパイル不能。
+    新しいUnity版ml-agents(Inference Engine対応)は通信プロトコルがPython 1.1.0と不一致の恐れ＝版整合が要検証。
+- **[次] Unity側ML再有効化（リスク管理しつつ）**: エージェントはUnity実行/ビルド/Play不可のため**完全自動で学習開始は不可**(Play必須)。方針:
+  ①manifestへ ml-agents 追加は**検証不能なまま本体を壊さない**(壊すと全projectコンパイル不能)。Unityがアイドルだとmanifest変更を自動再解決しない可能性大→無人での検証ループが成立しにくい。
+  ②そこで**ユーザー起床後に確実に流せる手順を用意**し、安全な範囲(Python側・設定リハーサル)を先行。Unity側のmanifest/asmdef/Define変更とBuild Training Scene→`ml/train.ps1`での学習開始は、Editor.logで版解決・コンパイルを確認しながら(失敗即revert)実施する。
+  ③次イテレーション: setup_env.ps1/train.ps1 のBOM修正、`MLAgentController.cs` の観測/行動が yaml(16次元・連続2+離散3)と一致するか確認、再有効化手順書を §「ML再有効化の手順」に統合。
 
 ---
 
