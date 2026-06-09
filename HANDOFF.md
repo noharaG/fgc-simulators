@@ -16,6 +16,14 @@
 > 万一 error CS が出たら疑うべき夜間変更: `RuleBasedNpcController.cs`(PD操舵に全面書換) / `EcsRobotSim.cs`(速度供給追加) / `MatchDirector.cs`(BuildObservation/TagBraces) / `Assets/FGC/Tests/`(新規)。いずれも `git revert` で個別に戻せる（コミットは機能単位で分離済）。
 > その後: Test Runner(EditMode)でNPCテスト緑 → Play で①NPC挙動目視 → ②Unity側ml-agents有効化(★手順) → ③学習。
 
+- **[整理 03:05] ①Java競技NPCの未移植要素＝移植バックログ（優先度順・ML置換予定のため優先度は中）**:
+  1. **難易度プリセット**（`CompetitionRobot.AiDifficulty`・実値）: STRONGEST(reactionInterval0.15s/predictionAccuracy1.00/shootAccuracyMult1.00/missRateAdd0.00)・STRONG(0.22/0.80/0.90/0.05)・MEDIUM(0.35/0.55/0.75/0.15)。
+     Unity移植案: reactionInterval=GetCommand結果を間隔キャッシュ／predictionAccuracy=球速×到達時間でリード(迎撃)しaccuracyでブレンド／shootAccuracyMult=`FieldConstants.ShootSuccessProb`へ乗算／missRateAdd=操舵/照準に乱数揺らぎ。`RuleBasedNpcController` に難易度structを持たせ既定=STRONGEST(現挙動)。
+  2. **弾道予測迎撃**（`estimateInterceptPoint`）: 現状は球の現在位置を狙う＝動く球に弱い。球速とロボ速度から会合点を予測して狙う（上記predictionAccuracyと連動）。
+  3. **シュート視線判定**（`checkShootTargetHit`）: 現状は射程2.0m＋正対15°のみ。Javaはゴール開口セグメントへの線分交差＋扇形(heading±閾値)で**実際に入るかを幾何判定**。要ゴール開口ジオメトリ（FieldLayout拡張）。
+  4. **チーム内の球回収割当**: 満杯に近い機体は撃ちに回し、余力ある機体へ最寄り球を分担（per-robot制御に対しチーム調整層が必要）。
+  5. **シュートコミット状態機械**（shootCommit*）: 撃てる体勢へ移動・固定する一連の動作。
+  ※いずれもPlay検証が要る挙動変更のため、未コンパイル変更を増やさない方針で**夜間は実装せず仕様化に留める**。起床後Unity検証下で順次。
 - **[完了 00:55] ①競技NPC操舵則をJava `CompetitionManager` から忠実移植**: 従来Unity版は練習用 `Behaviors.java`(kP=6・Pのみ)を移植していたが、
   **競技NPCの正典は別物**と判明し置換。`RuleBasedNpcController` を競技則へ: heading=純目標70%＋移動方向(回避込)30%ブレンド(DIFF_HEAD_PURE_BLEND)、
   旋回=**PD制御 kP=3.5/kD=1.0**(errorDot≈-`obs.AngularVelocity`)・**5°デッドバンド**(首振り防止)・±4rad/s、前進=**45°ゲート内で正対度(1-|err|/45°)×距離比 min(1,dist*3/最高速1.51)**。
