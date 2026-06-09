@@ -50,10 +50,15 @@
   Unity Play不可の制約下でも操舵則を担保するため、決定論的に5ケース検証: ①正対→前進&旋回0 ②右90°→旋回&前進ゼロ(45°ゲート) ③5°内→デッドバンドで旋回0 ④0.35m内→Intake要求 ⑤壁0.4m内→前進停止。
   `FGC.Tests.asmdef` に `FGC.Robot` 参照を追加。Test Runner(EditMode)で緑になれば移植した競技PD操舵が正しい。**テストコード＝ランタイム非影響・安全**。
 - **★Unity側ML再有効化の手順（起床後に実施推奨・要Editor.log検証/失敗即revert）**:
-  1. `Packages/manifest.json` に `com.unity.ml-agents` を追加（版は Package Manager で 6000.0 が解決する版。Python mlagents 1.1.0 との通信版整合に注意。まず Window>Package Manager で「ML Agents」を入れて解決させるのが安全）。
-  2. Editor.log で **版解決＋コンパイル0** を確認。Sentis/Inference Engine 由来の error CS が出たら manifest を即 revert（git）。
-  3. 通ったら `FGC.ML.asmdef` の `defineConstraints:["FGC_MLAGENTS"]` 維持のまま、`FGC.App.asmdef` に `FGC.ML` 参照を戻し、**Player Settings > Scripting Define Symbols に `FGC_MLAGENTS`** を追加（#if 部と MLAgentController が復活）。
-  4. `FGC > Build Training Scene` → 別シェルで `./ml/train.ps1` → 表示後 Unity で **Play**（または `-EnvExe` でヘッドレス並列）。
+  - ★**[2026-06-10 Web調査で判明・重要]** Sentis blocker の正解は「**新しい `com.unity.ml-agents` 4.0.x 系を使う**」こと。
+    **min対応Unityが 6000.0 に更新され、4.0.x は旧Sentisではなく Inference Engine(`com.unity.ai.inference`) ベース**＝当エディタ(6000.0.76)で解決可能。旧3.0.0(Unity.Sentis依存)に固執しない。
+  1. **Window > Package Manager > 「ML Agents」を install**（Unity 6000.0 では 4.0.x 系に解決し、Inference Engine を自動で連れてくる）。manifest手書きより Package Manager が安全。
+  2. Editor.log で **版解決＋コンパイル0** を確認。error CS が出たら manifest/packages-lock を即 revert（git）。
+     ※`MLAgentController.cs` は Agent/BehaviorParameters/ActionSpec/VectorSensor を使用。4.0.x でAPI差があればここを微修正（基本は2.x〜4.xで安定）。
+  3. **Python版を Unity版に合わせる（鉄則）**: venvは現在 `mlagents 1.1.0`。com.unity.ml-agents 4.0.x の対応Python版が異なる場合は
+     `ml/.venv310/Scripts/python.exe -m pip install mlagents==<対応版>` で揃える（リリースノートで確認。通信APIはsemverチェック）。
+  4. 通ったら `FGC.App.asmdef` に `FGC.ML` 参照を戻し、**Player Settings > Scripting Define Symbols に `FGC_MLAGENTS`** を追加（#if 部・MLAgentController・RewardShaper が復活。報酬のECS結線も有効化）。
+  5. `FGC > Build Training Scene` → 別シェルで `./ml/train.ps1` → `Listening on port 5004` 表示後 Unity で **Play**（または `-EnvExe` でヘッドレス並列・time-scale=20）。
 
 ---
 
