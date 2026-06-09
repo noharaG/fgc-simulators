@@ -27,8 +27,10 @@
    Unity 6000.0 では **com.unity.ml-agents 4.0.x 系**に解決し、**Inference Engine(`com.unity.ai.inference`)を自動導入**（旧Sentis非依存＝当エディタで通る）。
 2. `Editor.log` で **版解決＋コンパイル0** を確認。error CS が出たら manifest/packages-lock を `git revert`。
    ※`MLAgentController.cs` は Agent/BehaviorParameters/ActionSpec/VectorSensor を使用（2.x〜4.xで安定API）。4.0.xで差異があればここを微修正。
-3. **Python版を Unity版に合わせる**（鉄則）: 現在 venv は `mlagents 1.1.0`。4.0.x の対応Python版が違えば
-   `ml\.venv310\Scripts\python.exe -m pip install mlagents==<対応版>`（リリースノートで確認）。
+3. **Python版を Unity版に合わせる**: com.unity.ml-agents 4.0.x は **Release 23**。Python venv は現在 `mlagents 1.1.0`。
+   - Release 22/23 とも Python は 1.1.0 系のため **そのまま動く可能性が高い**。
+   - Play時に `communication API versions ... differ at the minor version level` の**警告が出ても、minorレベルなら学習は動く（無視可）**。慌てない。
+   - もし **hard mismatch で接続失敗**したら、Release 23 ページの対応版を確認して `ml\.venv310\Scripts\python.exe -m pip install mlagents==<対応版>`。
 4. `FGC.App.asmdef` に `FGC.ML` 参照を戻す → **Player Settings > Player > Scripting Define Symbols に `FGC_MLAGENTS`** を追加。
    → `MLAgentController` / `RewardShaper`（格納報酬のECS結線済）/ 観測22次元 が復活。
 
