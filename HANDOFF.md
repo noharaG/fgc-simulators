@@ -42,6 +42,10 @@
   **`[INFO] Listening on port 5004. Start training by pressing the Play button in the Unity Editor.`** に到達＝torch/mlagents/yaml解析/trainer起動が全て正常。接続待ちまで確認後に停止。
   - **実バグ発見・修正**: `fgc_ppo.yaml` の**日本語コメントが mlagents(PyYAML) で cp932 デコードエラー**(`UnicodeDecodeError ... Make sure your file is saved using UTF-8`)＝学習を確実にブロックしていた。**yamlをASCII化**して解消（.ps1と同じ日本語エンコーディング問題）。
   - **結論: ②はPython側完全動作。あとは Unity で ml-agents を有効化し Play すれば学習が始まる**（Unity側手順は上記★参照。Unity実行/Playはエージェント不可＝起床後）。`results/` は .gitignore 追加。
+- **✅ [完了 01:20] ③学習の報酬欠落バグを予防修正（#if FGC_MLAGENTS下・現ビルド非影響）**: `RewardShaper` は `StorageTrigger.OnDeposited` のみ購読していたが、
+  **既定の useEcsMechanics ON では StorageTrigger は無効化**され、格納は `EcsMechanics.OnDeposited`(同シグネチャ・既に発火実装あり L170/196)で起きる。
+  → このままML学習すると**主報酬(格納+1)が一切入らず学習が破綻**するところだった。`RewardShaper.BindEcs(EcsMechanics)` を追加し、`MatchDirector.CreateRewardShaper` で `_ecsMechanics` を購読するよう結線。これでECSモード学習でも格納報酬が確実に入る。
+  ※時間ペナルティ/登攀ボーナスは RobotActor 経由でECSモードでも既に機能。報酬係数: 格納1.0/Extinguisher0.5/登攀0.3per段/時間-0.01per秒。
 - **★Unity側ML再有効化の手順（起床後に実施推奨・要Editor.log検証/失敗即revert）**:
   1. `Packages/manifest.json` に `com.unity.ml-agents` を追加（版は Package Manager で 6000.0 が解決する版。Python mlagents 1.1.0 との通信版整合に注意。まず Window>Package Manager で「ML Agents」を入れて解決させるのが安全）。
   2. Editor.log で **版解決＋コンパイル0** を確認。Sentis/Inference Engine 由来の error CS が出たら manifest を即 revert（git）。

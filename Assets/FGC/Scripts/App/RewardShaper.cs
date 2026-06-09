@@ -28,11 +28,21 @@ namespace FGC.App
 
         private readonly Dictionary<RobotActor, ClimbZone> _lastZone = new Dictionary<RobotActor, ClimbZone>();
 
-        /// <summary>MatchDirector から格納ゾーンを受け取り購読する。</summary>
+        /// <summary>MatchDirector から格納ゾーン（旧GameObjectトリガ）を受け取り購読する。
+        /// 段階④以降の既定（useEcsMechanics ON）では StorageTrigger は無効化されるため、
+        /// ECS機構側の格納イベントは BindEcs で別途購読する必要がある（両方購読しても二重発火しない＝排他的に有効）。</summary>
         public void Bind(IEnumerable<StorageTrigger> triggers)
         {
+            if (triggers == null) return;
             foreach (var t in triggers)
                 if (t != null) t.OnDeposited += HandleDeposit;
+        }
+
+        /// <summary>ECS判定機構(EcsMechanics)の格納イベントを購読する。ECSモード学習で**主報酬(格納)を確実に発火**させる。
+        /// StorageTrigger と同一シグネチャ・同一ハンドラを使う。ECSモードでは StorageTrigger 無効＝こちらだけが発火する。</summary>
+        public void BindEcs(EcsMechanics ecs)
+        {
+            if (ecs != null) ecs.OnDeposited += HandleDeposit;
         }
 
         private void HandleDeposit(RobotActor actor, StorageKind kind)

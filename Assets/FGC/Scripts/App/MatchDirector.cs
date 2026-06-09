@@ -345,7 +345,8 @@ namespace FGC.App
             go.transform.SetParent(transform, false);
             var shaper = go.AddComponent<RewardShaper>();
             shaper.director = this;
-            shaper.Bind(_storageTriggers);
+            shaper.Bind(_storageTriggers);          // 旧GameObject機構（useEcsMechanics OFF時に発火）
+            shaper.BindEcs(_ecsMechanics);          // ECS機構（既定ON時に発火）＝ECS学習で主報酬を確実化
         }
 #endif
 
