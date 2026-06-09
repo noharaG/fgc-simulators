@@ -41,6 +41,28 @@ namespace FGC.Tests
         }
 
         [Test]
+        public void OpponentAheadRight_SteersAwayToLeft()
+        {
+            var c = new RuleBasedNpcController();
+            // 球は真正面(+Z)。敵が前方右(0.5m強)に居る → 回避ベクトルで進行方向が左(-X)へ寄り、左旋回(Turn<0)になるはず。
+            var o = Obs(new Vector3(3.5f, 0f, 3.5f), 0f, new Vector3(3.5f, 0f, 5.0f));
+            o.HasOpponent = true;
+            o.NearestOpponent = new Vector3(4.0f, 0f, 3.7f); // 前方やや右、距離≈0.54m（AvoidRadius1.0m内）
+            var cmd = c.GetCommand(o, Dt);
+            Assert.Less(cmd.Turn, -0.01f, "前方右の敵を避けて左へ操舵するはず（回避ブレンド）");
+        }
+
+        [Test]
+        public void BallBehind_TurnsAround_NoForward()
+        {
+            var c = new RuleBasedNpcController();
+            // +Z向きで球は真後ろ(-Z)。180°ずれ＝前進ゲート(45°)外なので前進せず回頭。
+            var cmd = c.GetCommand(Obs(new Vector3(3.5f, 0f, 3.5f), 0f, new Vector3(3.5f, 0f, 2.0f)), Dt);
+            Assert.AreEqual(0f, cmd.Forward, 1e-4f, "真後ろの目標へは前進せず回頭するはず");
+            Assert.Greater(Mathf.Abs(cmd.Turn), 0.5f, "180°ずれは大きく旋回するはず");
+        }
+
+        [Test]
         public void BallToTheRight_TurnsAndHoldsForwardUntilAligned()
         {
             var c = new RuleBasedNpcController();

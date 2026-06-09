@@ -63,6 +63,7 @@
   Unity Play不可の制約下でも操舵則を担保するため、決定論的に5ケース検証: ①正対→前進&旋回0 ②右90°→旋回&前進ゼロ(45°ゲート) ③5°内→デッドバンドで旋回0 ④0.35m内→Intake要求 ⑤壁0.4m内→前進停止。
   `FGC.Tests.asmdef` に `FGC.Robot` 参照を追加。Test Runner(EditMode)で緑になれば移植した競技PD操舵が正しい。**テストコード＝ランタイム非影響・安全**。
   追記(02:15): D項減衰テスト(既に旋回中はomegaが減衰)を追加＝計6ケース。`FieldLayout.NpcGoal` は純粋関数でEditMode例外なしを確認。
+  追記(03:20): **回避テスト**(前方右の敵→左操舵 Turn<0)＋**背後の球**(180°ずれ→前進0・回頭)を追加＝計8ケース。BlendAvoidanceの回帰も担保。
 - **✅ [修正 02:45] ECSモードで観測の速度が0だった問題を解消**: `EcsRobotSim` が各ロボの実速度を供給するようにした。
   `Bot.LinVel`(=`PhysicsVelocity.Linear`・worldで確実)＋`Bot.YawRate`(=`eulerAngles.y`差分/dt＝heading と同一系で符号一致)を LateUpdate で算出し、
   `TryGetVelocity(RobotActor,out lin,out yaw)` で公開。`MatchDirector.BuildObservation` はECSロボ稼働時これを優先（非ECS時は従来のrb）。
