@@ -38,6 +38,10 @@
   - `MLAgentController.cs` 整合確認: **観測22次元(自12+最寄り球4+近傍ロボ6)・連続2＋離散[2,2,2]・Behavior名 "FgcRobot"**＝yamlと一致。観測次元はUnity側BehaviorParametersから供給されるためyamlに次元ハードコード無し＝機能不整合なし（yamlコメントを22次元へ修正）。
   - **`train.ps1` / `setup_env.ps1` をASCII化**（日本語コメントがPS5.1で文字化け→構文エラーだったのを英語化）。両者 PS5.1 で構文解析OKを確認＝**学習起動スクリプトが実行可能に**。`$args`(自動変数)も`$mlArgs`へ改名。
   - これで Python側は「torchGPU venv＋mlagents＋起動スクリプト」が完全に揃った。残るは Unity側 ml-agents パッケージのみ。
+- **✅ [完了 01:05] ②Python学習パイプラインをE2E検証（Unity非依存）**: `mlagents-learn ml/fgc_ppo.yaml --run-id=... --force` を実行し、
+  **`[INFO] Listening on port 5004. Start training by pressing the Play button in the Unity Editor.`** に到達＝torch/mlagents/yaml解析/trainer起動が全て正常。接続待ちまで確認後に停止。
+  - **実バグ発見・修正**: `fgc_ppo.yaml` の**日本語コメントが mlagents(PyYAML) で cp932 デコードエラー**(`UnicodeDecodeError ... Make sure your file is saved using UTF-8`)＝学習を確実にブロックしていた。**yamlをASCII化**して解消（.ps1と同じ日本語エンコーディング問題）。
+  - **結論: ②はPython側完全動作。あとは Unity で ml-agents を有効化し Play すれば学習が始まる**（Unity側手順は上記★参照。Unity実行/Playはエージェント不可＝起床後）。`results/` は .gitignore 追加。
 - **★Unity側ML再有効化の手順（起床後に実施推奨・要Editor.log検証/失敗即revert）**:
   1. `Packages/manifest.json` に `com.unity.ml-agents` を追加（版は Package Manager で 6000.0 が解決する版。Python mlagents 1.1.0 との通信版整合に注意。まず Window>Package Manager で「ML Agents」を入れて解決させるのが安全）。
   2. Editor.log で **版解決＋コンパイル0** を確認。Sentis/Inference Engine 由来の error CS が出たら manifest を即 revert（git）。

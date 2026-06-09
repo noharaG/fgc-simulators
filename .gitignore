@@ -36,3 +36,7 @@ Thumbs.db
 # Python ML 学習用 venv（torch等・巨大・再生成可）
 /ml/.venv310/
 /ml/.venv*/
+
+# ML-Agents 学習成果(results)・大容量で再生成可
+/results/
+/ml/results/

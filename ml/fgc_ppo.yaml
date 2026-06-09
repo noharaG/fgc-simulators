@@ -1,6 +1,10 @@
-# FGCシミュレーター ML-Agents 学習設定（PPO・自己対戦）
-# 使い方: ml/train.ps1 から `mlagents-learn ml/fgc_ppo.yaml --run-id=fgc_xxx` で起動。
-# 観測22次元(自12+最寄り球4+近傍ロボ6)・行動=連続2(並進/旋回)+離散[2,2,2](インテーク/シュート/登攀)。MLAgentController.cs が正典（観測次元はUnity側BehaviorParametersから供給）。
+# FGC Simulator - ML-Agents training config (PPO + self-play)
+# Launch via ml/train.ps1 -> mlagents-learn ml/fgc_ppo.yaml --run-id=fgc_xxx
+# Obs 22 dims (self12 + nearest ball4 + nearby robots6), actions = continuous 2 (drive/turn)
+#   + discrete [2,2,2] (intake/shoot/climb). MLAgentController.cs is the source of truth
+#   (obs size is provided by the Unity BehaviorParameters at runtime, not hard-coded here).
+# NOTE: ASCII-only on purpose. mlagents/PyYAML may decode this file with the OS locale
+#   codec (cp932 on JP Windows); non-ASCII comments cause UnicodeDecodeError. Keep it ASCII.
 behaviors:
   FgcRobot:
     trainer_type: ppo
@@ -28,7 +32,7 @@ behaviors:
     time_horizon: 256
     summary_freq: 20000
     threaded: true
-    # 自己対戦（3v3の対称対戦を学習）
+    # Self-play (symmetric 3v3)
     self_play:
       save_steps: 50000
       team_change: 200000
