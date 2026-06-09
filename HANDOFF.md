@@ -15,9 +15,14 @@
   Unity `RuleBasedNpcController` に忠実移植（回避半径1.0m・重み×1.5・壁0.4m・操舵kP=6/±3rad/sは既存と同値）。
   `RobotObservation.NearestOpponent/NearestTeammate` を使用。これでNPCが球/ゴールへ向かいつつ近接ロボと壁を避けて回り込む。
   ※Java練習モードの12挙動(Still/Patrol/Circle/Wander/Bounce/Sweep/Spin/Drunk/Skittish 等)は競技NPCには不採用（練習用の動きパターンのため）。競技NPCの動き＝球回収→ゴール→シュート＋回避、が忠実な反映。
-- **[次] ②ML環境構築**: `FGC_MLAGENTS` トグル復活（asmdef defineConstraints / FGC.App参照 / Player Settings の Scripting Define Symbols に `FGC_MLAGENTS`）、
-  manifestに ml-agents 復帰。Sentis→Inference Engine 問題は要回避策（HANDOFF §「ML再有効化の手順」参照）。
-- **[次] ③学習開始**: PPO自己対戦。`ml/train.ps1`・yaml 既存。`FGC > Build Training Scene`。
+- **[進行中] ②ML環境構築**: 00:05 調査・着手。
+  - **既存ML資産**: `ml/setup_env.ps1`(Python3.10 venv＋torch cu121＋`mlagents==1.1.0`)・`ml/train.ps1`・`ml/fgc_ppo.yaml`(PPO自己対戦・16次元観測・連続2+離散3行動)・`Assets/FGC/Scripts/ML/MLAgentController.cs`(#if FGC_MLAGENTS)。
+  - **学習(Python側)はSentis不要**（Sentisはinference専用）。必要なのは Python3.10＋torch＋mlagents1.1.0 のみ。
+  - **真の blocker = Unity側 `com.unity.ml-agents` が `Unity.Sentis` 依存**。Sentis→Inference Engine改称で旧ml-agents 3.0.0 はコンパイル不能。
+  - **Web調査(2026-06)結果**: Unity 6対応の新しい com.unity.ml-agents が Inference Engine を使う形で存在する（Barracuda廃止→Sentis/Inference Engine 1.2系へ）。ただし Unity 6.3 で onnx インポータ競合の既知問題あり。
+    → **方針**: manifestへ「Unity 6.0で解決可能な com.unity.ml-agents の版」を追加し、Inference Engine(com.unity.ai.inference)で解決させる。**ただし検証不能なまま本体manifestを壊すと全projectがコンパイル不能になるため慎重に**（変更後 Editor.log で版解決とコンパイルを確認→失敗なら即revert）。
+  - **着手**: Python 3.10 を winget でバックグラウンド導入開始（ジョブ bvyp6e6p6）。完了後 venv＋mlagents を構築（Unity非依存・安全）。
+- **[次] Unity側ML再有効化**: ①Python3.10 venv完成を確認 → ②manifestに ml-agents(Unity6解決版)追加 → Editor.logで版解決＋コンパイル確認(失敗ならrevert) → ③`FGC.ML.asmdef` defineConstraints・`FGC.App`参照・Player Settings の Scripting Define に `FGC_MLAGENTS` 復元 → ④`FGC > Build Training Scene` → `ml/train.ps1` で学習開始。
 
 ---
 
