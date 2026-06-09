@@ -25,6 +25,10 @@
   4. **チーム内の球回収割当**: 満杯に近い機体は撃ちに回し、余力ある機体へ最寄り球を分担（per-robot制御に対しチーム調整層が必要）。
   5. **シュートコミット状態機械**（shootCommit*）: 撃てる体勢へ移動・固定する一連の動作。
   ※いずれもPlay検証が要る挙動変更のため、未コンパイル変更を増やさない方針で**夜間は実装せず仕様化に留める**。起床後Unity検証下で順次。
+- **[監査 03:50] ①ゲームプレイ・パラメータの忠実性＝全一致を確認**: Java `RobotConfig.java`(正典) vs Unity `FieldConstants`:
+  intakeCapacity10 / intakeFrontDepth0.08 / intakeFrontWidth0.50 / shootRange2.0 / shootAngleThreshold0.2618(15°) / shootSuccessProb0.7 / shootBPS5.0 / shootMissRadius2.0 /
+  robotSize0.5 / ballMass0.062 / maxOmega4.0 / maxAlpha12.0 / maxSpeed≈1.51(1/15ギア×0.8) — **すべて一致**。操舵則・回避に加え数値面でも①忠実性は担保。
+  ※Java側のみ存在: `whiteGoalSuccessProb0.5`/`whiteGoalMissRadius2.0`（白ゴール機構）はUnityに対応定数無し＝Java固有/未移植の可能性（要確認・現FGCルールに白ゴールがあるか含め起床後判断）。
 - **[完了 00:55] ①競技NPC操舵則をJava `CompetitionManager` から忠実移植**: 従来Unity版は練習用 `Behaviors.java`(kP=6・Pのみ)を移植していたが、
   **競技NPCの正典は別物**と判明し置換。`RuleBasedNpcController` を競技則へ: heading=純目標70%＋移動方向(回避込)30%ブレンド(DIFF_HEAD_PURE_BLEND)、
   旋回=**PD制御 kP=3.5/kD=1.0**(errorDot≈-`obs.AngularVelocity`)・**5°デッドバンド**(首振り防止)・±4rad/s、前進=**45°ゲート内で正対度(1-|err|/45°)×距離比 min(1,dist*3/最高速1.51)**。
