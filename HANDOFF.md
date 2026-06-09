@@ -11,7 +11,12 @@
 ユーザー就寝中の自走作業。承認不要(bypassPermissions)。本筋: ①Java版NPC挙動のUnity反映 → ②ML環境(ML-Agents)構築 → ③学習開始。
 エージェントはUnity実行不可 → `Editor.log` を読んで検証。画面は1分でオフ(処理継続)。
 
-- **[完了] ①NPC壁回避＋他ロボ回避の移植**: Java `Behaviors.java` の `seekBallAvoidPlayer`(他ロボ回避)＋`isNearWall`(壁回避)を
+- **[完了 00:55] ①競技NPC操舵則をJava `CompetitionManager` から忠実移植**: 従来Unity版は練習用 `Behaviors.java`(kP=6・Pのみ)を移植していたが、
+  **競技NPCの正典は別物**と判明し置換。`RuleBasedNpcController` を競技則へ: heading=純目標70%＋移動方向(回避込)30%ブレンド(DIFF_HEAD_PURE_BLEND)、
+  旋回=**PD制御 kP=3.5/kD=1.0**(errorDot≈-`obs.AngularVelocity`)・**5°デッドバンド**(首振り防止)・±4rad/s、前進=**45°ゲート内で正対度(1-|err|/45°)×距離比 min(1,dist*3/最高速1.51)**。
+  射撃ゲート(射程2.0/正対15°)は正典維持。旧 steerTowards/kP=6 は撤去。**コンパイル前提OK(obs.AngularVelocity/FieldConstants使用)・要Play目視(挙動)**。
+  ※Java競技NPCの更に高度な要素(チーム内の球回収割当・意思決定位相分散・シュートコミット状態機械・視線判定`checkShootTargetHit`)は未移植＝今後の候補。ただしNPC知能は最終的にMLで置換予定のため優先度は中。
+- **[完了・前回] ①NPC壁回避＋他ロボ回避の移植**: Java `Behaviors.java` の `seekBallAvoidPlayer`(他ロボ回避)＋`isNearWall`(壁回避)を
   Unity `RuleBasedNpcController` に忠実移植（回避半径1.0m・重み×1.5・壁0.4m・操舵kP=6/±3rad/sは既存と同値）。
   `RobotObservation.NearestOpponent/NearestTeammate` を使用。これでNPCが球/ゴールへ向かいつつ近接ロボと壁を避けて回り込む。
   ※Java練習モードの12挙動(Still/Patrol/Circle/Wander/Bounce/Sweep/Spin/Drunk/Skittish 等)は競技NPCには不採用（練習用の動きパターンのため）。競技NPCの動き＝球回収→ゴール→シュート＋回避、が忠実な反映。

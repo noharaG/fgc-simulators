@@ -4,16 +4,22 @@ using UnityEngine;
 namespace FGC.Robot
 {
     /// <summary>
-    /// ルールベースNPC（PLAN.md §3.2）。既存Java版 Behaviors.java の操舵則を移植：
-    ///   steerTowards（P制御 kP=6.0・最大±3.0rad/s）で目標方位へ旋回し、最寄りボールへ向かう。
-    /// 簡易ステートマシン: SeekBall（最寄り球へ）→ 近接でIntake → 保持中はGoalへ → 近接でShoot。
+    /// ルールベースNPC（PLAN.md §3.2）。**Java競技NPC(CompetitionManager)の差動2輪操舵則を忠実移植**：
+    ///   heading=純目標70%＋移動方向(回避込)30%ブレンド → 旋回はPD(kP=3.5/kD=1.0)・5°デッドバンド・±4rad/s、
+    ///   前進は45°ゲート内で正対度×距離比。近接ロボ回避(1.0m)＋壁回避(0.4m)も Behaviors.java から移植。
+    /// 簡易ステートマシン: SeekBall（最寄り球へ）→ 近接でIntake → 保持中はGoalへ → 射程内＆正対でShoot。
     /// ML版に差し替え可能なよう IRobotController として実装。指令は正規化 [-1,1] に変換して返す。
     /// </summary>
     public sealed class RuleBasedNpcController : IRobotController
     {
-        private const float KP = 6.0f;
-        private const float MaxOmega = 3.0f;     // Java版の操舵上限
-        private const float CruiseForward = 0.7f; // 巡航前進フラクション
+        // Java競技NPC(CompetitionManager)の差動2輪操舵則を忠実移植（練習Behaviorsのkp=6ではなく競技用PD）。
+        private const float KpOmega = 3.5f;        // 旋回P（DIFF_KP_OMEGA）
+        private const float KdOmega = 1.0f;        // 旋回D（DIFF_KD_OMEGA・errorDot≈-角速度で減衰）
+        private const float AngleDeadband = 0.087f; // 旋回デッドバンド5°（首振り防止・DIFF_ANGLE_DEADBAND）
+        private const float ForwardAngle = Mathf.PI / 4f; // 前進開始角度差45°（DIFF_FORWARD_ANGLE）
+        private const float HeadPureBlend = 0.7f;  // heading=純目標70%＋移動方向(回避込)30%（DIFF_HEAD_PURE_BLEND）
+        private const float MaxOmega = 4.0f;       // 競技は config.maxOmega(=4.0) でクランプ
+        private const float RobotSpecMaxSpeed = 1.51f; // 最高速[m/s]（RobotConfig 1/15ギア・×0.8込み・正典）。前進の距離比正規化に使用
         private const float IntakeRange = 0.35f;  // この距離で回収
         private const int Capacity = FieldConstants.RobotBallCapacity; // 保持上限（=10, 正典）
         // Java版 Behaviors.java の回避則（NPCの動きの忠実反映）:
@@ -59,43 +65,52 @@ namespace FGC.Robot
 
             // Java seekBallAvoidPlayer 移植: 目標方向に、近接する他ロボ(敵/味方)からの回避ベクトルをブレンド。
             // これにより球やゴールへ向かいつつ、近くのロボを避けて回り込む（Java NPCの動きを忠実反映）。
-            Vector2 steerDir = toTarget.normalized;
-            steerDir = BlendAvoidance(steerDir, self, obs.HasOpponent, obs.NearestOpponent);
-            steerDir = BlendAvoidance(steerDir, self, obs.HasTeammate, obs.NearestTeammate);
+            // heading目標: 純目標方向(70%)＋近接ロボ回避を加えた移動方向(30%)をブレンド（Java競技NPC DIFF_HEAD_PURE_BLEND）。
+            Vector2 pureDir = toTarget / dist;
+            Vector2 moveDir = pureDir;
+            moveDir = BlendAvoidance(moveDir, self, obs.HasOpponent, obs.NearestOpponent);
+            moveDir = BlendAvoidance(moveDir, self, obs.HasTeammate, obs.NearestTeammate);
+            Vector2 steerDir = HeadPureBlend * pureDir + (1f - HeadPureBlend) * moveDir;
+            if (steerDir.sqrMagnitude > 1e-12f) steerDir.Normalize(); else steerDir = pureDir;
 
             // Unity の eulerAngles.y(θ) は forward=(sinθ,0,cosθ)。目標へ向く角は atan2(Δx, Δz)。
             float targetHeading = Mathf.Atan2(steerDir.x, steerDir.y);
-            float headingErr = Mathf.Abs(NormalizeAngle(heading - targetHeading));
-            float omega = SteerTowards(heading, targetHeading);
+            float err = NormalizeAngle(targetHeading - heading);
+            float absErr = Mathf.Abs(err);
+
+            // 旋回: デッドバンド5°内は停止（首振り防止）、外はPD制御（errorDot≈-現在角速度で減衰）。±MaxOmegaでクランプ。
+            float omega = 0f;
+            if (absErr >= AngleDeadband)
+                omega = Mathf.Clamp(err * KpOmega + (-obs.AngularVelocity) * KdOmega, -MaxOmega, MaxOmega);
 
             // 射撃ゲート（正典）: 満杯保持・射程内・ゴールへ正対(15°以内) のとき発射
             if (holdingFull
                 && dist <= FieldConstants.ShootRange
-                && headingErr <= FieldConstants.ShootAngleThreshold)
+                && absErr <= FieldConstants.ShootAngleThreshold)
             {
                 wantShoot = true;
             }
 
-            // 向きが大きくずれている間は減速して旋回優先（Java版踏襲: >0.6radで0.3倍）
-            float fwd = CruiseForward;
-            if (headingErr > 0.6f) fwd *= 0.3f;
-            // ほぼ到達したら前進を緩める
-            if (dist < IntakeRange) fwd *= 0.4f;
+            // 前進: 45°ゲート内で「正対度(1-|err|/45°)」×「距離比 min(1, dist*3/最高速)」。正対＆遠いほど速い（Java競技NPC同値）。
+            float fwd = 0f;
+            if (absErr < ForwardAngle && dist > 0.05f)
+            {
+                float alignFactor = 1f - absErr / ForwardAngle;
+                float distFactor = Mathf.Min(1f, dist * 3f / RobotSpecMaxSpeed);
+                fwd = distFactor * alignFactor;
+            }
             // Java isNearWall 移植: 進行方向の壁が近ければ前進を止める（旋回は継続＝壁から向きを変えて回避）
             if (IsNearWall(self, heading, WallAvoidLimit)) fwd = 0f;
 
             return new DriveCommand
             {
                 Forward = fwd,
-                Turn = Mathf.Clamp(omega / FieldNpcMaxOmega(), -1f, 1f),
+                Turn = Mathf.Clamp(omega / MaxOmega, -1f, 1f),
                 Intake = wantIntake,
                 Shoot = wantShoot,
                 Climb = false
             };
         }
-
-        // omega を正規化Turnへ変換する基準（ロボのMaxOmega=4rad/s想定）。
-        private static float FieldNpcMaxOmega() => 4.0f;
 
         /// <summary>Java seekBallAvoidPlayer 移植: 近接する他ロボから離れる回避ベクトルを進行方向にブレンド。
         /// AvoidRadius(1.0m)内のとき、近いほど強く(重み×1.5)離れる方向を足して正規化する。</summary>
@@ -123,14 +138,6 @@ namespace FGC.Robot
             float dN = fz > 0f ? (sz - self.y) / fz : float.MaxValue;  // z=7（北）
             float min = Mathf.Min(Mathf.Min(dW, dE), Mathf.Min(dS, dN));
             return min < limit;
-        }
-
-        /// <summary>角度偏差をP制御で旋回角速度へ（Java版 steerTowards 移植・最大±3rad/s）。</summary>
-        private static float SteerTowards(float currentHeading, float targetHeading)
-        {
-            float diff = NormalizeAngle(targetHeading - currentHeading);
-            float omega = diff * KP;
-            return Mathf.Clamp(omega, -MaxOmega, MaxOmega);
         }
 
         private static float NormalizeAngle(float a)
