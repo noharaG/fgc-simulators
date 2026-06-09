@@ -50,12 +50,11 @@
   Unity Play不可の制約下でも操舵則を担保するため、決定論的に5ケース検証: ①正対→前進&旋回0 ②右90°→旋回&前進ゼロ(45°ゲート) ③5°内→デッドバンドで旋回0 ④0.35m内→Intake要求 ⑤壁0.4m内→前進停止。
   `FGC.Tests.asmdef` に `FGC.Robot` 参照を追加。Test Runner(EditMode)で緑になれば移植した競技PD操舵が正しい。**テストコード＝ランタイム非影響・安全**。
   追記(02:15): D項減衰テスト(既に旋回中はomegaが減衰)を追加＝計6ケース。`FieldLayout.NpcGoal` は純粋関数でEditMode例外なしを確認。
-- **⚠ [既知事項 02:30] ECSモードで観測の速度がほぼ0（要対応・未修正）**: `BuildObservation` は `rb.linearVelocity`/`rb.angularVelocity.y` を読むが、
-  ECSモード（既定）では GameObjectロボは kinematic 化＋`EcsRobotSim.LateUpdate` が `transform.SetPositionAndRotation` で**直接**同期するため、
-  kinematic rb の速度は0/陳腐化。影響: ①NPCのPD **D項が実質0＝P制御に縮退**（オーバーシュート微増・破綻はしない）／②**ML観測の自己速度(obs5-7)が0**＝学習品質低下。
-  **修正方針（未実施の理由＝慎重）**: EcsRobotSim が各ロボの速度を公開し BuildObservation がECS時はそれを使う。ただし ECS `PhysicsVelocity.Angular` は
-  慣性空間でワールドyaw角速度と単位/系が一致せず、**誤った角速度をD項へ渡すと0より悪化**しうる＋Play検証不可のため夜間は見送り。
-  正しくは: 線速度=`PhysicsVelocity.Linear`(world)をそのまま、角速度yaw=前フレームとのheading差分/dt から算出（系が明確）して観測へ。起床後にPlayで確認しつつ実装するのが安全。
+- **✅ [修正 02:45] ECSモードで観測の速度が0だった問題を解消**: `EcsRobotSim` が各ロボの実速度を供給するようにした。
+  `Bot.LinVel`(=`PhysicsVelocity.Linear`・worldで確実)＋`Bot.YawRate`(=`eulerAngles.y`差分/dt＝heading と同一系で符号一致)を LateUpdate で算出し、
+  `TryGetVelocity(RobotActor,out lin,out yaw)` で公開。`MatchDirector.BuildObservation` はECSロボ稼働時これを優先（非ECS時は従来のrb）。
+  **効果**: ①NPCのPD **D項が正しく機能**（`-yawRate*Kd` でオーバーシュート減衰＝Java設計通り）／②**ML観測の自己速度が実値**に。
+  前回慎重に避けた `PhysicsVelocity.Angular`(慣性空間)は使わず、heading差分でyawを出すため系が明確・符号も検証済（D項テストは観測直渡しのため不変）。#if非依存の実改善・コンパイル前提OK・要Play目視。
 - **✅ [検証 02:15] ML配線の完全性を点検（修正不要＝良好）**: `MatchDirector` の ML経路を確認 — 観測注入 `ml.observationProvider=()=>BuildObservation(actor)`(L689)、
   エピソード終了 `OnFinish` で勝敗報酬(self_play用 +1/-1/0)＋`FinishEpisode()`(L145-159)、`BehaviorParameters/DecisionRequester` は `MLAgentController.Awake` で自動設定、
   報酬は前回修正で StorageTrigger＋EcsMechanics 両購読。**＝ML学習に必要な配線は全て揃っており、隠れたギャップは無い**（Unity側ml-agents有効化後そのまま学習可能）。

@@ -52,6 +52,11 @@ namespace FGC.App
             public float Speed;            // DriveKinematics の保持状態（目標前進速度）
             public float Omega;            // 同（目標角速度）
             public IRobotController Npc;   // 既存のルールベースNPCを再利用
+            // 観測用の実速度（kinematic GameObject rb は速度0のため、ECS結果からここで供給する）。
+            public Vector3 LinVel;         // ワールド線速度[m/s]（PhysicsVelocity.Linear）
+            public float YawRate;          // ワールドyaw角速度[rad/s]（heading差分/dt・eulerAngles.y系）
+            public float PrevYawDeg;       // 前フレームのyaw[deg]
+            public bool HasPrevYaw;        // 初回フレーム判定
         }
 
         private World _world;
@@ -232,14 +237,46 @@ namespace FGC.App
         private void LateUpdate()
         {
             if (!_spawned) return;
+            float dt = Time.deltaTime;
             foreach (var b in _bots)
             {
                 if (b.Actor == null) continue;
                 LocalTransform lt = _em.GetComponentData<LocalTransform>(b.Entity);
+                var rot = new Quaternion(lt.Rotation.value.x, lt.Rotation.value.y, lt.Rotation.value.z, lt.Rotation.value.w);
                 b.Actor.transform.SetPositionAndRotation(
-                    new Vector3(lt.Position.x, lt.Position.y, lt.Position.z),
-                    new Quaternion(lt.Rotation.value.x, lt.Rotation.value.y, lt.Rotation.value.z, lt.Rotation.value.w));
+                    new Vector3(lt.Position.x, lt.Position.y, lt.Position.z), rot);
+
+                // 観測用の実速度を供給（kinematic rb は0のまま＝NPCのD項/ML観測が死ぬのを防ぐ）。
+                // 線速度=ECSのワールド速度をそのまま、yaw角速度=eulerAngles.y の差分/dt（heading と同一系＝符号一致）。
+                if (_em.HasComponent<PhysicsVelocity>(b.Entity))
+                {
+                    var pv = _em.GetComponentData<PhysicsVelocity>(b.Entity);
+                    b.LinVel = new Vector3(pv.Linear.x, pv.Linear.y, pv.Linear.z);
+                }
+                float yawDeg = rot.eulerAngles.y;
+                b.YawRate = (b.HasPrevYaw && dt > 1e-6f)
+                    ? Mathf.DeltaAngle(b.PrevYawDeg, yawDeg) * Mathf.Deg2Rad / dt
+                    : 0f;
+                b.PrevYawDeg = yawDeg;
+                b.HasPrevYaw = true;
             }
+        }
+
+        /// <summary>観測用: ECS剛体の実速度を返す（kinematicなGameObject rb は速度0のため）。
+        /// MatchDirector.BuildObservation がECSロボ稼働時にこれを優先使用する。線速度=world[m/s]、yawRate=world[rad/s]。</summary>
+        public bool TryGetVelocity(RobotActor actor, out Vector3 linVel, out float yawRate)
+        {
+            for (int i = 0; i < _bots.Count; i++)
+            {
+                if (_bots[i].Actor == actor)
+                {
+                    linVel = _bots[i].LinVel;
+                    yawRate = _bots[i].YawRate;
+                    return _bots[i].HasPrevYaw; // 初回フレームは未確定（false）
+                }
+            }
+            linVel = Vector3.zero; yawRate = 0f;
+            return false;
         }
 
         private static quaternion ToQuaternion(Quaternion r) => new quaternion(r.x, r.y, r.z, r.w);

@@ -715,6 +715,12 @@ namespace FGC.App
             var rb = actor.GetComponent<Rigidbody>();
             Vector3 vel = rb != null ? rb.linearVelocity : Vector3.zero;
             float yawRate = rb != null ? rb.angularVelocity.y : 0f;
+            // ECSロボ稼働時は GameObject rb が kinematic で速度0のため、ECS結果の実速度を優先（NPC D項/ML観測の品質確保）。
+            if (_ecsRobots != null && _ecsRobots.TryGetVelocity(actor, out var ecsLin, out var ecsYaw))
+            {
+                vel = ecsLin;
+                yawRate = ecsYaw;
+            }
 
             Vector3 nearest = actor.transform.position;
             bool hasBall = false;
