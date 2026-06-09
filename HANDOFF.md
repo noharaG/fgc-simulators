@@ -28,7 +28,16 @@
 - **[次] Unity側ML再有効化（リスク管理しつつ）**: エージェントはUnity実行/ビルド/Play不可のため**完全自動で学習開始は不可**(Play必須)。方針:
   ①manifestへ ml-agents 追加は**検証不能なまま本体を壊さない**(壊すと全projectコンパイル不能)。Unityがアイドルだとmanifest変更を自動再解決しない可能性大→無人での検証ループが成立しにくい。
   ②そこで**ユーザー起床後に確実に流せる手順を用意**し、安全な範囲(Python側・設定リハーサル)を先行。Unity側のmanifest/asmdef/Define変更とBuild Training Scene→`ml/train.ps1`での学習開始は、Editor.logで版解決・コンパイルを確認しながら(失敗即revert)実施する。
-  ③次イテレーション: setup_env.ps1/train.ps1 のBOM修正、`MLAgentController.cs` の観測/行動が yaml(16次元・連続2+離散3)と一致するか確認、再有効化手順書を §「ML再有効化の手順」に統合。
+  ③次イテレーション: setup_env.ps1/train.ps1 のBOM修正、`MLAgentController.cs` の観測/行動が yaml と一致するか確認、再有効化手順書を §「ML再有効化の手順」に統合。
+- **✅ [完了 00:45] ML周辺の整備（安全・Unity非依存）**:
+  - `MLAgentController.cs` 整合確認: **観測22次元(自12+最寄り球4+近傍ロボ6)・連続2＋離散[2,2,2]・Behavior名 "FgcRobot"**＝yamlと一致。観測次元はUnity側BehaviorParametersから供給されるためyamlに次元ハードコード無し＝機能不整合なし（yamlコメントを22次元へ修正）。
+  - **`train.ps1` / `setup_env.ps1` をASCII化**（日本語コメントがPS5.1で文字化け→構文エラーだったのを英語化）。両者 PS5.1 で構文解析OKを確認＝**学習起動スクリプトが実行可能に**。`$args`(自動変数)も`$mlArgs`へ改名。
+  - これで Python側は「torchGPU venv＋mlagents＋起動スクリプト」が完全に揃った。残るは Unity側 ml-agents パッケージのみ。
+- **★Unity側ML再有効化の手順（起床後に実施推奨・要Editor.log検証/失敗即revert）**:
+  1. `Packages/manifest.json` に `com.unity.ml-agents` を追加（版は Package Manager で 6000.0 が解決する版。Python mlagents 1.1.0 との通信版整合に注意。まず Window>Package Manager で「ML Agents」を入れて解決させるのが安全）。
+  2. Editor.log で **版解決＋コンパイル0** を確認。Sentis/Inference Engine 由来の error CS が出たら manifest を即 revert（git）。
+  3. 通ったら `FGC.ML.asmdef` の `defineConstraints:["FGC_MLAGENTS"]` 維持のまま、`FGC.App.asmdef` に `FGC.ML` 参照を戻し、**Player Settings > Scripting Define Symbols に `FGC_MLAGENTS`** を追加（#if 部と MLAgentController が復活）。
+  4. `FGC > Build Training Scene` → 別シェルで `./ml/train.ps1` → 表示後 Unity で **Play**（または `-EnvExe` でヘッドレス並列）。
 
 ---
 

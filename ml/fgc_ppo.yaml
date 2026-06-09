@@ -1,6 +1,6 @@
 # FGCシミュレーター ML-Agents 学習設定（PPO・自己対戦）
 # 使い方: ml/train.ps1 から `mlagents-learn ml/fgc_ppo.yaml --run-id=fgc_xxx` で起動。
-# 観測16次元・行動=連続2(並進/旋回)+離散3(インテーク/シュート/登攀)を想定（MLAgentController準拠）。
+# 観測22次元(自12+最寄り球4+近傍ロボ6)・行動=連続2(並進/旋回)+離散[2,2,2](インテーク/シュート/登攀)。MLAgentController.cs が正典（観測次元はUnity側BehaviorParametersから供給）。
 behaviors:
   FgcRobot:
     trainer_type: ppo
