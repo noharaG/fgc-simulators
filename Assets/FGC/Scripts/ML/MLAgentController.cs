@@ -50,6 +50,11 @@ namespace FGC.ML
             bp.BehaviorName = BehaviorNameConst;
             // **重要**: Default でないと外部トレーナ(mlagents-learn)へ接続しない（学習時の必須設定）。
             bp.BehaviorType = BehaviorType.Default;
+            // **自己対戦の必須設定**: 赤=Team0 / 青=Team1。全員Team0だと ghost trainer のチーム交代と
+            // ELO計算が機能しない（fgc_run9で全agentが FgcRobot?team=0 になりELOが指標にならなかった）。
+            // alliance は MatchDirector.CreateRobot が本コンポーネント追加前に設定済み＝Awake時点で確定。
+            var actorForTeam = GetComponent<RobotActor>();
+            bp.TeamId = (actorForTeam != null && actorForTeam.alliance == AllianceColor.Blue) ? 1 : 0;
             bp.BrainParameters.VectorObservationSize = ObservationSize;
             bp.BrainParameters.NumStackedVectorObservations = 1;
             bp.BrainParameters.ActionSpec = new ActionSpec(ContinuousActions, DiscreteBranches);
@@ -60,7 +65,7 @@ namespace FGC.ML
             dr.TakeActionsBetweenDecisions = true;
 
             // 診断: ML エージェントが実際に生成・設定されたか（Editor.log で接続前提を確認する用）。
-            Debug.Log($"[FGC] MLAgentController 設定: behavior='{bp.BehaviorName}' type={bp.BehaviorType} obs={ObservationSize} on '{gameObject.name}'");
+            Debug.Log($"[FGC] MLAgentController 設定: behavior='{bp.BehaviorName}' team={bp.TeamId} type={bp.BehaviorType} obs={ObservationSize} on '{gameObject.name}'");
         }
 
         /// <summary>IRobotController：直近に decision で確定した指令を返す。</summary>

@@ -26,7 +26,10 @@
   - **最後の死因＝Claudeツールハーネスの子プロセス掃除**（クラッシュ/Defenderイベント皆無・数分後に無音消失が全run共通）。**解＝WMI経由起動**（`Invoke-CimMethod Win32_Process Create`＝親がWindowsサービス）→ 生存確認。
   - **恒久ランチャ `ml/train_detached.ps1`** を新設（WMI起動・既定8env/20倍速/no-graphics/CPU torch）。エージェントから起動する時は必ずこちら。ユーザー自身のターミナルなら train.ps1 でも可。
   - 追加の環境系修正: `runInBackground: 1`（非フォーカス窓のポーズで描画ありenvが全停止していた）／torchはCPU版2.5.1にピン（CUDA版はNVIDIA DLLでネイティブクラッシュ）。
-  - **次回ビルドで有効になるもの**: EcsBallSimヘッドレスガード（現exeは--no-graphicsで描画例外スパムが出るが動作・性能影響小）＋runInBackground。手すきでTrainingSceneを `C:\fgcbuild` へ再ビルド推奨。
+  - **次回ビルドで有効になるもの**: EcsBallSimヘッドレスガード（現exeは--no-graphicsで描画例外スパムが出るが動作・性能影響小）＋runInBackground
+    ＋**TeamId修正（赤=Team0/青=Team1）**。fgc_run9は全agentが team=0 のため ghost trainer のチーム交代・ELOが機能せず（ELO一方的低下は指標として無意味）、
+    勝敗±1もチーム概念なしで学習。**自己対戦を正しく効かせるには再ビルド→新run が必要**。Mean Reward は得点行動の学習自体は進んでいることを示す（床-1.5に対し良い区間-0.13）。
+    手すきでTrainingSceneを `C:\fgcbuild` へ再ビルド推奨。
   - 監視: `Get-Content ml\train_fgc_run9.log -Tail 20 -Wait` ／ TensorBoard: `ml\.venv310\Scripts\tensorboard.exe --logdir results`。Mean Reward(-1.4≈時間ペナルティのみ)が上昇していけば学習成功。2000万stepで約5時間・50万stepごとにチェックポイント。
 
 ## 🌙 夜間自走ログ（2026-06-09 夜〜・15分間隔ループ a5f32abb で進行中）
