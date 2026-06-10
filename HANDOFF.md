@@ -22,6 +22,12 @@
   （mlagents1.1.0のCUDA+normalize非互換`RuntimeError: two devices`も併発、`--torch-device=cpu`/`CUDA_VISIBLE_DEVICES=-1`でも防げず）。
   **解＝venvのtorchをCPU専用wheelへ入替**（NVIDIA DLLを一切ロードしない）。学習はデタッチ起動(`Start-Process`+ログ`ml/train_run*.log`)が安定。
 - 学習成果/TensorBoard: `results/<run-id>`（トレーナ起動時のcwd配下。Desktop/results に旧run残骸あり・削除可）。
+- **🎉 [15:25 ③達成] PPO自己対戦の学習が安定稼働**（fgc_run9）: **30万ステップ/4分44秒(~1050step/s)・Mean Reward/ELO出力＝エピソード完走・autoRestartループ動作**。
+  - **最後の死因＝Claudeツールハーネスの子プロセス掃除**（クラッシュ/Defenderイベント皆無・数分後に無音消失が全run共通）。**解＝WMI経由起動**（`Invoke-CimMethod Win32_Process Create`＝親がWindowsサービス）→ 生存確認。
+  - **恒久ランチャ `ml/train_detached.ps1`** を新設（WMI起動・既定8env/20倍速/no-graphics/CPU torch）。エージェントから起動する時は必ずこちら。ユーザー自身のターミナルなら train.ps1 でも可。
+  - 追加の環境系修正: `runInBackground: 1`（非フォーカス窓のポーズで描画ありenvが全停止していた）／torchはCPU版2.5.1にピン（CUDA版はNVIDIA DLLでネイティブクラッシュ）。
+  - **次回ビルドで有効になるもの**: EcsBallSimヘッドレスガード（現exeは--no-graphicsで描画例外スパムが出るが動作・性能影響小）＋runInBackground。手すきでTrainingSceneを `C:\fgcbuild` へ再ビルド推奨。
+  - 監視: `Get-Content ml\train_fgc_run9.log -Tail 20 -Wait` ／ TensorBoard: `ml\.venv310\Scripts\tensorboard.exe --logdir results`。Mean Reward(-1.4≈時間ペナルティのみ)が上昇していけば学習成功。2000万stepで約5時間・50万stepごとにチェックポイント。
 
 ## 🌙 夜間自走ログ（2026-06-09 夜〜・15分間隔ループ a5f32abb で進行中）
 ユーザー就寝中の自走作業。承認不要(bypassPermissions)。本筋: ①Java版NPC挙動のUnity反映 → ②ML環境(ML-Agents)構築 → ③学習開始。
