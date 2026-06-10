@@ -10,6 +10,8 @@
     "FGC.Input",
     "FGC.VR",
     "FGC.UI",
+    "FGC.ML",
+    "Unity.ML-Agents",
     "FGC.Sim.Shared",
     "FGC.Sim.ECS",
     "Unity.Entities",

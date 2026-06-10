@@ -7,6 +7,7 @@
   <Project Path="FGC.VR.csproj" />
   <Project Path="FGC.Tests.csproj" />
   <Project Path="FGC.Editor.csproj" />
+  <Project Path="FGC.ML.csproj" />
   <Project Path="FGC.Ball.csproj" />
   <Project Path="FGC.Input.csproj" />
   <Project Path="FGC.Sim.Shared.csproj" />
