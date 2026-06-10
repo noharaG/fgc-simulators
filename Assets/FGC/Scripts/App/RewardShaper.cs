@@ -25,8 +25,13 @@ namespace FGC.App
         public float extinguisherReward = 0.5f;    // EXTINGUISHER格納（GLOBAL）
         public float climbStepReward = 0.3f;       // 1ゾーン上昇あたり
         public float timePenaltyPerSec = 0.01f;    // 毎秒の微小ペナルティ
+        // 中間報酬（fgc_run10対策）: 「球に近づく→Intake→運ぶ→格納」の行動チェーンは終端(格納+1)しか
+        // 報酬が無く、ランダム探索では学習の足がかりを掴めずELO/報酬が頭打ちになった。
+        // 最初のリンク「球を拾う」に密な報酬を与えて段階学習を可能にする（格納1.0より小さく保つ）。
+        public float intakeReward = 0.1f;          // 球を1個拾う（HeldBalls増加）あたり
 
         private readonly Dictionary<RobotActor, ClimbZone> _lastZone = new Dictionary<RobotActor, ClimbZone>();
+        private readonly Dictionary<RobotActor, int> _lastHeld = new Dictionary<RobotActor, int>();
 
         /// <summary>MatchDirector から格納ゾーン（旧GameObjectトリガ）を受け取り購読する。
         /// 段階④以降の既定（useEcsMechanics ON）では StorageTrigger は無効化されるため、
@@ -83,6 +88,12 @@ namespace FGC.App
                     ml.AddShapedReward(climbStepReward * steps);
                 }
                 _lastZone[actor] = actor.ClimbZone;
+
+                // 球ピックアップ報酬: HeldBalls の増加分のみ（格納/シュートでの減少や試合リセットの0化は対象外）
+                _lastHeld.TryGetValue(actor, out int prevHeld);
+                if (actor.HeldBalls > prevHeld)
+                    ml.AddShapedReward(intakeReward * (actor.HeldBalls - prevHeld));
+                _lastHeld[actor] = actor.HeldBalls;
             }
         }
     }
