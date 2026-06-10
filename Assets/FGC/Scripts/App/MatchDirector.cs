@@ -70,6 +70,10 @@ namespace FGC.App
         private bool _ecsFinishHandled; // ECS試合のFinished検出を一度だけOnFinishへ流すためのエッジ管理
 
         public MatchConfig config = MatchConfig.Default(AllianceColor.Red, MatchMode.ThreeVsThree);
+        [Tooltip("学習用: 全6スロットをMLエージェントに強制する（Build Training Sceneが立てる）。" +
+                 "MatchConfig.Slotsはreadonlyでシリアライズされず、エディタ時のSetAllKindがPlay開始で失われるため、" +
+                 "boolフラグ(シリアライズ可)経由でランタイムに全ML化する。")]
+        public bool forceMlAgents = false;
 
         [Tooltip("試合終了で自動的にリセット→再開する（ML学習で連続エピソードを回す用。VR対戦ではfalse）")]
         public bool autoRestart = false;
@@ -102,6 +106,15 @@ namespace FGC.App
             // （20は重すぎて全球アクティブ時にフレーム崩壊→試合が止まる原因になっていた）
             Physics.defaultSolverIterations = 8;
             Physics.defaultSolverVelocityIterations = 2;
+
+            // 学習用: 全ML化をランタイムで強制（readonly Slots がPlay開始で既定に戻る問題への対処）。
+            // SpawnRobots が config.Slots を読む前に適用する。
+            if (forceMlAgents)
+            {
+                if (config.Slots.Count == 0) config.RebuildSlots();
+                config.SetAllKind(ControllerKind.MLAgent);
+                Debug.Log($"[FGC] 学習用: 全{config.Slots.Count}スロットをMLエージェントに強制しました(forceMlAgents)。");
+            }
 
             BuildField();
             SpawnRobots();

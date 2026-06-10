@@ -48,7 +48,8 @@ namespace FGC.Editor
             BuildFieldInScene(director); // フィールド＋コライダをエディタ時に焼き込み
             director.autoRestart = true;                    // 連続エピソード
             director.autoBegin = true;                      // メニュー無しで即開始
-            director.config.SetAllKind(ControllerKind.MLAgent); // 全6機を学習エージェントに
+            director.config.SetAllKind(ControllerKind.MLAgent); // 全6機を学習エージェントに（エディタ表示用）
+            director.forceMlAgents = true;                  // ★ランタイムで全ML化を強制（readonly Slotsがランタイムで既定に戻る問題への対処。boolはシリアライズ可）
 
             CreatePlainCamera(); // 学習の様子を見る用（ヘッドレス時は無視される）
             CreateHud(director);

@@ -7,6 +7,22 @@
 
 ---
 
+## ☀ 6/10 午前〜午後: ②ML有効化 完了 → ③学習起動デバッグ（ユーザー協働）
+
+- **✅ ②完了**: Package Managerで `com.unity.ml-agents 4.0.3`(+`com.unity.ai.inference 2.6.1`)導入＝**Sentis問題解消・コンパイル0**。
+  `FGC.App.asmdef` に `FGC.ML`＋`Unity.ML-Agents` 参照、Scripting Define に `FGC_MLAGENTS`。※外部編集したasmdefはCtrl+Rで拾われないことがあり**Unity再起動で反映**された。
+- **✅ 重要バグ修正: MatchConfig.Slots は readonly＝Unityがシリアライズしない** → Build Training Scene の SetAllKind(MLAgent) がPlay開始で消え、
+  **MLエージェントが0体**になっていた（これが「接続しない」の最初の真因）。対策＝`MatchDirector.forceMlAgents`(bool・シリアライズ可)を追加しランタイムで全ML化。
+  `MLAgentController.ConfigureBrain` に `BehaviorType.Default` 明示＋診断ログ（`[FGC] MLAgentController 設定:`×6 で確認可能）。
+- **✅ gRPC非ASCIIパス問題**: Editor Playでは `grpc_csharp_ext.x64.dll` が**日本語プロジェクトパスからロード不能**（IOException→接続せずinference fallback）。
+  環境変数 `GRPC_CSHARP_EXT_OVERRIDE_LOCATION` は**効かなかった**。**解＝ASCIIパスへビルド**: `C:\fgcbuild\fgc.exe`（exe/_Dataを `fgc`/`fgc_Data` にリネームしてDLLパス完全ASCII化）→ **8環境並列で接続成功**（`Connected to Unity environment with package version 4.0.3` ×8）。
+- **✅ ヘッドレスenvクラッシュ修正**: `--no-graphics` では `Graphics.DrawMeshInstanced` が `Instancing is not supported` を毎フレームthrow→env全滅。
+  `EcsBallSim.LateUpdate` にNullグラフィックスデバイス/インスタンシング非対応ガードを追加（**要再ビルドで有効**）。それまで train.ps1 の `--no-graphics` はスイッチ化(`-NoGraphics`)し既定OFF。
+- **✅ トレーナ即死の真因特定（イベントログ）**: `python.exe が nvdxgdmal64.dll_unloaded (NVIDIAドライバ) で 0xc0000005`＝**CUDA版torchがNVIDIA DLL経由でネイティブクラッシュ**
+  （mlagents1.1.0のCUDA+normalize非互換`RuntimeError: two devices`も併発、`--torch-device=cpu`/`CUDA_VISIBLE_DEVICES=-1`でも防げず）。
+  **解＝venvのtorchをCPU専用wheelへ入替**（NVIDIA DLLを一切ロードしない）。学習はデタッチ起動(`Start-Process`+ログ`ml/train_run*.log`)が安定。
+- 学習成果/TensorBoard: `results/<run-id>`（トレーナ起動時のcwd配下。Desktop/results に旧run残骸あり・削除可）。
+
 ## 🌙 夜間自走ログ（2026-06-09 夜〜・15分間隔ループ a5f32abb で進行中）
 ユーザー就寝中の自走作業。承認不要(bypassPermissions)。本筋: ①Java版NPC挙動のUnity反映 → ②ML環境(ML-Agents)構築 → ③学習開始。
 エージェントはUnity実行不可 → `Editor.log` を読んで検証。画面は1分でオフ(処理継続)。

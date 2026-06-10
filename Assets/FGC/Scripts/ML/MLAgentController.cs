@@ -48,6 +48,8 @@ namespace FGC.ML
             var bp = GetComponent<BehaviorParameters>();
             if (bp == null) bp = gameObject.AddComponent<BehaviorParameters>();
             bp.BehaviorName = BehaviorNameConst;
+            // **重要**: Default でないと外部トレーナ(mlagents-learn)へ接続しない（学習時の必須設定）。
+            bp.BehaviorType = BehaviorType.Default;
             bp.BrainParameters.VectorObservationSize = ObservationSize;
             bp.BrainParameters.NumStackedVectorObservations = 1;
             bp.BrainParameters.ActionSpec = new ActionSpec(ContinuousActions, DiscreteBranches);
@@ -56,6 +58,9 @@ namespace FGC.ML
             if (dr == null) dr = gameObject.AddComponent<DecisionRequester>();
             dr.DecisionPeriod = 5;
             dr.TakeActionsBetweenDecisions = true;
+
+            // 診断: ML エージェントが実際に生成・設定されたか（Editor.log で接続前提を確認する用）。
+            Debug.Log($"[FGC] MLAgentController 設定: behavior='{bp.BehaviorName}' type={bp.BehaviorType} obs={ObservationSize} on '{gameObject.name}'");
         }
 
         /// <summary>IRobotController：直近に decision で確定した指令を返す。</summary>

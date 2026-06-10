@@ -255,6 +255,11 @@ namespace FGC.App
         private void LateUpdate()
         {
             if (!_spawned || ballMesh == null || ballMaterial == null) return;
+            // ヘッドレス学習(-nographics)では Null グラフィックスデバイス＝インスタンシング非対応で
+            // DrawMeshInstanced が毎フレーム InvalidOperationException を投げ、学習envを巻き込んで落とす。
+            // 描画は学習に不要なのでスキップ（物理・機構・観測は通常どおり動く）。
+            if (UnityEngine.SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null
+                || !UnityEngine.SystemInfo.supportsInstancing) return;
             var arr = _renderQuery.ToComponentDataArray<LocalTransform>(Allocator.Temp);
             float s = FieldConstants.BallRadius * 2f;
             var scale = new Vector3(s, s, s);

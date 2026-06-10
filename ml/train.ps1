@@ -10,7 +10,11 @@
 param(
     [string]$RunId = "",
     [switch]$Resume,
-    [string]$EnvExe = ""
+    [string]$EnvExe = "",
+    # Headless rendering. Requires a build that contains the EcsBallSim headless guard
+    # (DrawMeshInstanced throws "Instancing is not supported" on the Null graphics device
+    # and kills every env otherwise). Omit to run envs with graphics (safe with any build).
+    [switch]$NoGraphics
 )
 
 $ErrorActionPreference = "Stop"
@@ -28,12 +32,18 @@ if ($RunId -eq "") {
 }
 
 # NOTE: do not use $args (PowerShell automatic variable).
-$mlArgs = @($config, "--run-id=$RunId")
+# CPU training on purpose: mlagents 1.1.0 + CUDA crashes with normalize:true
+# ("Expected all tensors to be on the same device, cuda:0 and cpu") even with --torch-device=cpu,
+# because the threaded trainer does not fully propagate the device setting. Hiding CUDA entirely
+# makes the bug structurally impossible. Our net is tiny (256x2, obs22) so CPU is plenty fast;
+# the bottleneck is env collection (8 parallel envs).
+$env:CUDA_VISIBLE_DEVICES = "-1"
+$mlArgs = @($config, "--run-id=$RunId", "--torch-device=cpu")
 if ($Resume) { $mlArgs += "--resume" }
 if ($EnvExe -ne "") {
     $mlArgs += "--env=$EnvExe"
     $mlArgs += "--num-envs=8"     # RTX4070 + 16C: parallel envs. Tune to load.
-    $mlArgs += "--no-graphics"
+    if ($NoGraphics) { $mlArgs += "--no-graphics" }
     $mlArgs += "--time-scale=20"
 }
 
