@@ -40,3 +40,7 @@ Thumbs.db
 # ML-Agents 学習成果(results)・大容量で再生成可
 /results/
 /ml/results/
+
+# 学習トレーナの実行ログ(肥大化・再生成可)
+/ml/train_*.log
+/ml/train_*.err.log

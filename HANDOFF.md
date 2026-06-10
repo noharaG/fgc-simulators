@@ -30,6 +30,9 @@
     ＋**TeamId修正（赤=Team0/青=Team1）**。fgc_run9は全agentが team=0 のため ghost trainer のチーム交代・ELOが機能せず（ELO一方的低下は指標として無意味）、
     勝敗±1もチーム概念なしで学習。**自己対戦を正しく効かせるには再ビルド→新run が必要**。Mean Reward は得点行動の学習自体は進んでいることを示す（床-1.5に対し良い区間-0.13）。
     手すきでTrainingSceneを `C:\fgcbuild` へ再ビルド推奨。
+  - **✅ [15:50] 再ビルド完了→fgc_run10 が正規構成で稼働**: `FgcRobot?team=0`×8＋`team=1`×8 の2チーム登録を確認＝ghost trainer/ELOが本来の動作。
+    ヘッドレスガード検証OK(描画例外0件)。旧run9は停止(縮退構成のため破棄・チェックポイントは results/fgc_run9 に残存)。
+    監視: `ml/train_fgc_run10.log`。※2チーム自己対戦は半数が凍結スナップショット側に回るためステップ消化が run9 比でやや遅いのが正常。
   - 監視: `Get-Content ml\train_fgc_run9.log -Tail 20 -Wait` ／ TensorBoard: `ml\.venv310\Scripts\tensorboard.exe --logdir results`。Mean Reward(-1.4≈時間ペナルティのみ)が上昇していけば学習成功。2000万stepで約5時間・50万stepごとにチェックポイント。
 
 ## 🌙 夜間自走ログ（2026-06-09 夜〜・15分間隔ループ a5f32abb で進行中）
