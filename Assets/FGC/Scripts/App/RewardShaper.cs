@@ -30,8 +30,18 @@ namespace FGC.App
         // 最初のリンク「球を拾う」に密な報酬を与えて段階学習を可能にする（格納1.0より小さく保つ）。
         public float intakeReward = 0.1f;          // 球を1個拾う（HeldBalls増加）あたり
 
-        private readonly Dictionary<RobotActor, ClimbZone> _lastZone = new Dictionary<RobotActor, ClimbZone>();
+        // ★ファーミング対策(2026-06-10): 登攀は「エピソード内の最高到達ゾーン」を超えた時だけ報酬。
+        // 旧実装(直前ゾーンとの差分)はブレース接触→離脱(猶予1s)→再接触の往復で+0.3が無限に稼げた
+        // (1試合で+20超=得点報酬を圧倒するハック)。OnMatchReset でエピソード毎にクリアする。
+        private readonly Dictionary<RobotActor, ClimbZone> _bestZone = new Dictionary<RobotActor, ClimbZone>();
         private readonly Dictionary<RobotActor, int> _lastHeld = new Dictionary<RobotActor, int>();
+
+        /// <summary>試合リセット時に MatchDirector から呼ぶ：エピソード単位の報酬状態をクリアする。</summary>
+        public void OnMatchReset()
+        {
+            _bestZone.Clear();
+            _lastHeld.Clear();
+        }
 
         /// <summary>MatchDirector から格納ゾーン（旧GameObjectトリガ）を受け取り購読する。
         /// 段階④以降の既定（useEcsMechanics ON）では StorageTrigger は無効化されるため、
@@ -80,14 +90,14 @@ namespace FGC.App
                 // 時間整形
                 ml.AddShapedReward(-timePenaltyPerSec * dt);
 
-                // 登攀ゾーン上昇ボーナス
-                _lastZone.TryGetValue(actor, out var prev);
-                if ((int)actor.ClimbZone > (int)prev)
+                // 登攀ゾーン上昇ボーナス（エピソード内の最高到達を超えた分のみ＝接触往復ファーミング不可）
+                _bestZone.TryGetValue(actor, out var best);
+                if ((int)actor.ClimbZone > (int)best)
                 {
-                    int steps = (int)actor.ClimbZone - (int)prev;
+                    int steps = (int)actor.ClimbZone - (int)best;
                     ml.AddShapedReward(climbStepReward * steps);
+                    _bestZone[actor] = actor.ClimbZone;
                 }
-                _lastZone[actor] = actor.ClimbZone;
 
                 // 球ピックアップ報酬: HeldBalls の増加分のみ（格納/シュートでの減少や試合リセットの0化は対象外）
                 _lastHeld.TryGetValue(actor, out int prevHeld);

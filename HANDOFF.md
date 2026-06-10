@@ -35,6 +35,24 @@
     監視: `ml/train_fgc_run10.log`。※2チーム自己対戦は半数が凍結スナップショット側に回るためステップ消化が run9 比でやや遅いのが正常。
   - 監視: `Get-Content ml\train_fgc_run9.log -Tail 20 -Wait` ／ TensorBoard: `ml\.venv310\Scripts\tensorboard.exe --logdir results`。Mean Reward(-1.4≈時間ペナルティのみ)が上昇していけば学習成功。2000万stepで約5時間・50万stepごとにチェックポイント。
 
+## 🔍 6/10 夕: ML学習監査（並列ワークフロー＋反証検証）で根本原因を特定・一括修正
+
+run10(2000万step完走)が頭打ちだった真因を6次元監査で特定。**確定した壁と修正(すべて適用済み・要再ビルド)**:
+1. **［致命・確定］ML行動が物理に届いていなかった**: `EcsRobotSim` が全ロボを内部生成 `b.Npc`(RuleBasedNpc)で駆動し、
+   `actor.Controller`(=MLAgentController)はコード全体で未消費（唯一の読取は ExternallyDriven=true で到達不能）。
+   →run9/run10は「行動→報酬」の因果が切断されたノイズ学習だった（ELOフラット・報酬-1.5張り付きの正体）。
+   **修正**: EcsRobotSim.FixedUpdate で `actor.Controller` 優先＋観測は `actor.ObservationProvider`（b.Npcはフォールバック）。
+2. **［確定］残時間観測が常に1.0**: BuildObservation が非稼働の `_match.Remaining` を参照 → `_hudRemaining` に修正。
+3. **［自己検証］最寄り球の観測がECSモードで死亡**: WildfireManager の GameObject 球リストは ECS モードで常に空
+   → `EcsBallSim.TryGetNearestBall`(読み取り専用)を新設し BuildObservation がECS球を直接クエリ。
+4. **［自己検証］観測に同盟・自陣ゴールが無い**: 赤青同一方策でどちらのゴールへ運ぶか判別不能
+   → 観測22→**25**（自陣SUPPRESSION相対Δx/Δz＋同盟フラグ）。`ObservationSize=25`。
+5. **［自己検証］角速度の正規化誤り**: /150(試合時間!) → /4(maxOmega) に修正。
+6. **［自己検証］登攀報酬ファーミング**: ブレース接触⇄離脱の往復で+0.3無限取得可能
+   → エピソード内最高到達ゾーン超過時のみ報酬＋`RewardShaper.OnMatchReset`(ResetMatchから呼ぶ)。
+※ピックアップ報酬+0.1は実装済(d9a420e)。yaml(PPO/self_play)は今回据え置き（一度に1変数）。
+※監査subagentの一部はセッション上限で未完（報酬/エピソード/機構次元の網羅は次回継続可）。
+
 ## 🌙 夜間自走ログ（2026-06-09 夜〜・15分間隔ループ a5f32abb で進行中）
 ユーザー就寝中の自走作業。承認不要(bypassPermissions)。本筋: ①Java版NPC挙動のUnity反映 → ②ML環境(ML-Agents)構築 → ③学習開始。
 エージェントはUnity実行不可 → `Editor.log` を読んで検証。画面は1分でオフ(処理継続)。

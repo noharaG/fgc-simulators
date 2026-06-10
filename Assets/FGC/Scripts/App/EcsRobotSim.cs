@@ -174,16 +174,28 @@ namespace FGC.App
                 fwd = math.lengthsq(fwd) > 1e-6f ? math.normalize(fwd) : new float3(0f, 0f, 1f);
                 float heading = math.atan2(fwd.x, fwd.z); // Unity forward=(sinθ,0,cosθ) と同系
 
-                // 指令の取得: 人間スロット=Gamepad / その他=既存ルールベースNPC（観測をECSから構築）。
+                // 指令の取得: 人間スロット=Gamepad / その他=**RobotActorに割り当てられたController**（ML/NPC）。
+                // ★重要バグ修正(2026-06-10): 従来は常に内部生成の b.Npc を使っており、MatchDirector が割り当てた
+                // MLAgentController の行動が物理・機構に一切届かず「行動→報酬」の因果が切断されていた
+                // （run9/run10の2000万stepが無意味化した根本原因）。Controller優先・b.Npcは保険のフォールバック。
                 DriveCommand cmd = DriveCommand.Zero;
                 if (_active)
                 {
                     bool isHuman = (b.SlotIndex == humanSlot)
                         && b.Alliance == (_config != null ? _config.PlayerAlliance : b.Alliance);
                     if (isHuman)
+                    {
                         cmd = GamepadInput.Read();
+                    }
                     else
-                        cmd = b.Npc.GetCommand(BuildObservation(b, lt.Position, heading, balls), dt);
+                    {
+                        var ctrl = (b.Actor != null && b.Actor.Controller != null) ? b.Actor.Controller : b.Npc;
+                        // 観測は MatchDirector.BuildObservation(敵/味方/残時間込み)を優先。無ければECSローカル版。
+                        RobotObservation obs = (b.Actor != null && b.Actor.ObservationProvider != null)
+                            ? b.Actor.ObservationProvider()
+                            : BuildObservation(b, lt.Position, heading, balls);
+                        cmd = ctrl.GetCommand(in obs, dt);
+                    }
                 }
                 // 機構(EcsMechanics)が参照する LastCommand を更新（ExternallyDriven中は本体が更新しないため）。
                 if (b.Actor != null) b.Actor.SetLastCommand(cmd);

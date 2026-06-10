@@ -142,6 +142,25 @@ namespace FGC.App
             _pool.Add(e);
         }
 
+        /// <summary>最寄りの「場の球」位置を返す（読み取り専用・消費しない）。ML/NPCの観測用。
+        /// ★追加(2026-06-10): MatchDirector.BuildObservation は WildfireManager(GameObject球)しか見ておらず、
+        /// ECSモードでは球リストが常に空＝最寄り球の観測が死んでいた（得点学習の主観測）。</summary>
+        public bool TryGetNearestBall(Vector3 from, out Vector3 pos)
+        {
+            pos = from;
+            if (!_spawned) return false;
+            float3 p = (float3)from;
+            float best = float.MaxValue;
+            bool found = false;
+            for (int i = 0; i < _active.Count; i++)
+            {
+                float3 bp = _em.GetComponentData<LocalTransform>(_active[i]).Position;
+                float d2 = math.distancesq(bp, p);
+                if (d2 < best) { best = d2; pos = (Vector3)bp; found = true; }
+            }
+            return found;
+        }
+
         /// <summary>球Entityの現在位置（飛来球の得点判定用）。Entityが無効ならfalse。</summary>
         public bool TryGetBallPosition(Entity e, out Vector3 pos)
         {

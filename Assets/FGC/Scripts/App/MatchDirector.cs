@@ -203,6 +203,10 @@ namespace FGC.App
             if (_ecsRobots != null) { _ecsRobots.ResetPositions(); _ecsRobots.SetActive(false); }
             // 段階④: 飛来球追跡/クールダウンを破棄して待機。
             if (_ecsMechanics != null) { _ecsMechanics.ResetState(); _ecsMechanics.SetActive(false); }
+#if FGC_MLAGENTS
+            // ML報酬のエピソード状態（登攀の最高到達・保持球トラッキング）をクリア。
+            if (_rewardShaper != null) _rewardShaper.OnMatchReset();
+#endif
         }
 
         /// <summary>段階②: ECS球シム(EcsBallSim)を用意して放出を開始する。放出点/メッシュ/色は
@@ -352,6 +356,8 @@ namespace FGC.App
         private static void DisableIfPresent(MonoBehaviour mb) { if (mb != null) mb.enabled = false; }
 
 #if FGC_MLAGENTS
+        private RewardShaper _rewardShaper;        // ResetMatch でエピソード状態をクリアするため保持
+
         private void CreateRewardShaper()
         {
             var go = new GameObject("RewardShaper");
@@ -360,6 +366,7 @@ namespace FGC.App
             shaper.director = this;
             shaper.Bind(_storageTriggers);          // 旧GameObject機構（useEcsMechanics OFF時に発火）
             shaper.BindEcs(_ecsMechanics);          // ECS機構（既定ON時に発火）＝ECS学習で主報酬を確実化
+            _rewardShaper = shaper;
         }
 #endif
 
@@ -737,7 +744,11 @@ namespace FGC.App
 
             Vector3 nearest = actor.transform.position;
             bool hasBall = false;
-            if (wildfire != null)
+            // ★修正(2026-06-10): ECSモードでは球はECS Entity＝WildfireManagerのGameObject球リストは常に空で
+            // 最寄り球の観測が死んでいた（得点学習の主観測）。ECS球を直接クエリする。
+            if (useEcsBalls && _ecsBalls != null)
+                hasBall = _ecsBalls.TryGetNearestBall(actor.transform.position, out nearest);
+            else if (wildfire != null)
                 hasBall = wildfire.TryGetNearestBall(actor.transform.position, out nearest);
 
             int ownSuppression = 0;
@@ -774,7 +785,9 @@ namespace FGC.App
                 AngularVelocity = yawRate,
                 HeldBalls = actor.HeldBalls,
                 ClimbZone = actor.ClimbZone,
-                MatchTimeRemaining = _match.Remaining,
+                // ★修正(2026-06-10): useEcsMatch既定では _match は始動せず Remaining が常に150=観測が定数1.0(死に観測)だった。
+                // _hudRemaining は ECS/旧タイマー両モードで毎フレーム更新されるミラーなのでこちらを使う。
+                MatchTimeRemaining = _hudRemaining,
                 OwnRegionSuppression = ownSuppression,
                 GlobalExtinguisher = wildfire != null ? wildfire.ExtinguisherStored : 0,
                 NearestBall = nearest,

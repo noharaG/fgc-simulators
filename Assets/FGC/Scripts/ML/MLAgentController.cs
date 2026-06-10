@@ -30,7 +30,7 @@ namespace FGC.ML
 
         // 脳設定（yaml の behavior 名・観測/行動次元と一致させる）
         public const string BehaviorNameConst = "FgcRobot";
-        public const int ObservationSize = 22;        // CollectObservations の追加数と一致（基本16＋近傍ロボ6）
+        public const int ObservationSize = 25;        // CollectObservations の追加数と一致（基本16＋近傍ロボ6＋自陣ゴール/同盟3）
         public const int ContinuousActions = 2;       // 並進, 旋回
         private static readonly int[] DiscreteBranches = { 2, 2, 2 }; // Intake, Shoot, Climb
 
@@ -86,7 +86,9 @@ namespace FGC.ML
             sensor.AddObservation(Mathf.Cos(o.HeadingRad));
             sensor.AddObservation(o.Velocity.x / SpeedScale);
             sensor.AddObservation(o.Velocity.z / SpeedScale);
-            sensor.AddObservation(o.AngularVelocity / FieldConstants.MatchDuration); // 緩い正規化
+            // ★修正(2026-06-10): 旧 /MatchDuration(150) はスケール誤り（±4rad/sが±0.027に潰れ実質死に観測）。
+            // ロボの最大角速度 maxOmega=4rad/s で正規化する。
+            sensor.AddObservation(o.AngularVelocity / 4f);
 
             sensor.AddObservation(o.HeldBalls / (float)FieldConstants.RobotBallCapacity);
             sensor.AddObservation((int)o.ClimbZone / 4f);
@@ -110,6 +112,14 @@ namespace FGC.ML
             sensor.AddObservation(relMate.x / PosScale);                   // 20
             sensor.AddObservation(relMate.z / PosScale);                   // 21
             sensor.AddObservation(o.HasTeammate ? 1f : 0f);               // 22
+
+            // ★追加(2026-06-10): 自陣ゴール相対位置＋同盟フラグ = 3観測（23-25）。
+            // 赤(Team0)青(Team1)が同一方策を共有するため、これが無いと「自分がどちらの
+            // SUPPRESSIONへ運ぶべきか」を観測から判別できず、得点行動が原理的に学習困難だった。
+            Vector2 ownGoal = FieldLayout.NpcGoal(o.Alliance);
+            sensor.AddObservation((ownGoal.x - o.Position.x) / PosScale);  // 23 自陣ゴールへのΔx
+            sensor.AddObservation((ownGoal.y - o.Position.z) / PosScale);  // 24 自陣ゴールへのΔz
+            sensor.AddObservation(o.Alliance == AllianceColor.Blue ? 1f : 0f); // 25 同盟(赤0/青1)
         }
 
         public override void OnActionReceived(ActionBuffers actions)
