@@ -22,7 +22,9 @@ $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $proj = Split-Path -Parent $here
 $ml   = Join-Path $here ".venv310\Scripts\mlagents-learn.exe"
 $cfg  = Join-Path $here "fgc_ppo.yaml"
-$log  = Join-Path $here ("train_" + $RunId + ".log")
+# Timestamped log per launch: a stale reader once held a write-lock on the fixed-name log,
+# which made cmd's redirect fail instantly and silently killed every relaunch (2026-06-11).
+$log  = Join-Path $here ("train_" + $RunId + "_" + (Get-Date -Format "HHmmss") + ".log")
 
 if (-not (Test-Path $ml)) { Write-Error "venv not found: $ml"; exit 1 }
 if (-not (Test-Path $EnvExe)) { Write-Error "env exe not found: $EnvExe (build TrainingScene to an ASCII path)"; exit 1 }
