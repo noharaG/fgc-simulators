@@ -196,6 +196,25 @@ namespace FGC.App
             return found;
         }
 
+        /// <summary>★2026-06-12: 全500球の分布を**密度グリッド**に集計する（全能観測用）。
+        /// フィールド(7x7m)を gridX×gridZ マスに区切り、各マスの球数を buffer に書き込む（行=z, 列=x）。
+        /// 全ロボ共通のワールド固定マップなので MatchDirector が毎フレーム1回だけ呼んで共有する。</summary>
+        public void FillBallDensityGrid(int gridX, int gridZ, float[] buffer)
+        {
+            if (buffer == null || buffer.Length < gridX * gridZ) return;
+            System.Array.Clear(buffer, 0, gridX * gridZ);
+            if (!_spawned) return;
+            float cellX = FieldConstants.FieldSizeX / gridX;
+            float cellZ = FieldConstants.FieldSizeZ / gridZ;
+            for (int i = 0; i < _active.Count; i++)
+            {
+                float3 bp = _em.GetComponentData<LocalTransform>(_active[i]).Position;
+                int gx = (int)(bp.x / cellX); if (gx < 0) gx = 0; else if (gx >= gridX) gx = gridX - 1;
+                int gz = (int)(bp.z / cellZ); if (gz < 0) gz = 0; else if (gz >= gridZ) gz = gridZ - 1;
+                buffer[gz * gridX + gx] += 1f;
+            }
+        }
+
         /// <summary>球Entityの現在位置（飛来球の得点判定用）。Entityが無効ならfalse。</summary>
         public bool TryGetBallPosition(Entity e, out Vector3 pos)
         {

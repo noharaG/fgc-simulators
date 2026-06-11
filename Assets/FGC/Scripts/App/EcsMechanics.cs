@@ -55,6 +55,9 @@ namespace FGC.App
         /// ML報酬で「持ち込み格納」より「射出」を優遇するボーナス用（2026-06-12 ユーザー要望）。</summary>
         public System.Action<RobotActor, StorageKind> OnShotDeposited;
 
+        /// <summary>射出した球が**フィールド外に出た**時に発火（撃ったロボ）。場外ペナルティ用（2026-06-12 ユーザー要望）。</summary>
+        public System.Action<RobotActor> OnShotOut;
+
         private struct Zone
         {
             public Vector3 Center;
@@ -190,26 +193,42 @@ namespace FGC.App
 
                 if (_balls.TryGetBallPosition(s.Ball, out Vector3 bp))
                 {
-                    for (int z = 0; z < _zones.Count; z++)
+                    // ★場外判定(2026-06-12 ユーザー要望): シュートがフィールド外へ出たら球は消滅し、
+                    // 撃ったロボへペナルティ（OnShotOut→RewardShaper）。乱射でボールを場外へ捨てる行動を抑止。
+                    bool outOfField = bp.x < -0.05f || bp.x > FieldConstants.FieldSizeX + 0.05f
+                                   || bp.z < -0.05f || bp.z > FieldConstants.FieldSizeZ + 0.05f
+                                   || bp.y < -0.5f; // 床抜け(場外落下)
+                    if (outOfField)
                     {
-                        var zone = _zones[z];
-                        if (!Inside(bp, zone.Center, zone.Half)) continue;
-                        // SUPPRESSION は撃った主の同盟一致のみ得点（報酬帰属を維持）。
-                        if (zone.Restricted && (s.Shooter == null || s.Shooter.alliance != zone.Alliance)) continue;
                         _balls.DespawnToPool(s.Ball);
-                        _wildfire.DepositToStorage(zone.Kind, 1);
-                        if (s.Shooter != null)
-                        {
-                            OnDeposited?.Invoke(s.Shooter, zone.Kind);
-                            OnShotDeposited?.Invoke(s.Shooter, zone.Kind); // 射出由来＝ボーナス対象
-                        }
+                        if (s.Shooter != null) OnShotOut?.Invoke(s.Shooter);
                         remove = true;
-                        break;
+                    }
+                    else
+                    {
+                        for (int z = 0; z < _zones.Count; z++)
+                        {
+                            var zone = _zones[z];
+                            if (!Inside(bp, zone.Center, zone.Half)) continue;
+                            // SUPPRESSION は撃った主の同盟一致のみ得点（報酬帰属を維持）。
+                            if (zone.Restricted && (s.Shooter == null || s.Shooter.alliance != zone.Alliance)) continue;
+                            _balls.DespawnToPool(s.Ball);
+                            _wildfire.DepositToStorage(zone.Kind, 1);
+                            if (s.Shooter != null)
+                            {
+                                OnDeposited?.Invoke(s.Shooter, zone.Kind);
+                                OnShotDeposited?.Invoke(s.Shooter, zone.Kind); // 射出由来＝ボーナス対象
+                            }
+                            remove = true;
+                            break;
+                        }
                     }
                 }
                 else remove = true; // 球が無効（既に退避済み等）
 
-                if (!remove && s.Ttl <= 0f) { _balls.DespawnToPool(s.Ball); remove = true; }
+                // ★変更(2026-06-12): TTL切れ＝「外れて場内に落ちた」球は**場に残す**（従来は消滅＝供給が漏れていた）。
+                // 追跡だけ終了し、床の球として再回収可能にする（現実準拠）。場外は上の判定で消滅+ペナルティ済み。
+                if (!remove && s.Ttl <= 0f) remove = true;
 
                 if (remove) _shots.RemoveAt(i);
                 else _shots[i] = s;

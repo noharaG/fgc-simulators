@@ -42,5 +42,15 @@ namespace FGC.Core
         // 味方2台の「意図」: 位置＋速度（進行方向＝何をしに行くか）＋保持数（満載→ゴールへ/空→回収へ）
         public Vector3 Mate1Pos, Mate1Vel; public int Mate1Held; public bool HasMate1;
         public Vector3 Mate2Pos, Mate2Vel; public int Mate2Held; public bool HasMate2;
+
+        /// <summary>全500球の密度グリッド（7×7マス・各マスの球数。ワールド固定・全ロボ共有参照）。
+        /// 「ボール500個すべての位置を常に把握」のための学習可能表現（2026-06-12 ユーザー要望）。null可。</summary>
+        public float[] BallGrid;
+
+        // 敵3台の「見える情報」: 位置と向きのみ（2026-06-12 ユーザー要望の情報非対称）。
+        // 選手は敵の今の位置・向きは見えるが「どのボールを狙うか」等の意図は読めない＝速度/保持数は与えない。
+        public Vector3 Opp1Pos; public float Opp1HeadingRad; public bool HasOpp1;
+        public Vector3 Opp2Pos; public float Opp2HeadingRad; public bool HasOpp2;
+        public Vector3 Opp3Pos; public float Opp3HeadingRad; public bool HasOpp3;
     }
 }

@@ -30,9 +30,11 @@ namespace FGC.ML
 
         // 脳設定（yaml の behavior 名・観測/行動次元と一致させる）
         public const string BehaviorNameConst = "FgcRobot";
-        public const int ObservationSize = 46;        // CollectObservations の追加数と一致
+        public const int ObservationSize = 110;       // CollectObservations の追加数と一致
         // 内訳: 自分12 + 最寄り球4 + 近傍敵3 + 近傍味方3 + 自陣ゴール/同盟3
-        //     + 全能ボール(2-5番目の球8 + 残球数1)=9 + 味方意図(位置2+速度2+保持1+有無1)×2=12（2026-06-12拡張）
+        //     + 全能ボール(2-5番目の球8 + 残球数1)=9 + 味方意図(位置2+速度2+保持1+有無1)×2=12
+        //     + 全500球の密度グリッド7×7=49（選手の客観視）
+        //     + 敵3台の可視情報(位置2+向き2+有無1)×3=15（位置と向きのみ＝意図は読めない。2026-06-12拡張）
         public const int ContinuousActions = 2;       // 並進, 旋回
         private static readonly int[] DiscreteBranches = { 2, 2, 2 }; // Intake, Shoot, Climb
 
@@ -134,6 +136,28 @@ namespace FGC.ML
             // 速度=進行方向(何をしに行くか)、保持数=満載なら帰投/空なら回収中、の予測材料。
             AddMate(sensor, o, o.Mate1Pos, o.Mate1Vel, o.Mate1Held, o.HasMate1);
             AddMate(sensor, o, o.Mate2Pos, o.Mate2Vel, o.Mate2Held, o.HasMate2);
+
+            // ★全500球の密度グリッド7×7(2026-06-12): 選手の客観視。自陣スタンドから遠いマスほど
+            // 距離減衰ノイズで曖昧（MatchDirector.ApplyPerceptionFalloff）。各マス球数を/15で正規化 = 47-95。
+            var grid = o.BallGrid;
+            for (int i = 0; i < 49; i++)
+                sensor.AddObservation(grid != null && i < grid.Length ? Mathf.Min(1f, grid[i] / 15f) : 0f);
+
+            // ★敵3台の可視情報(2026-06-12 情報非対称): 位置Δ(2)+向きsin/cos(2)+有無(1) ×3 = 96-110。
+            // 「位置と向きは見える。どの球を狙うか等の意図(速度/保持)は読めない」。
+            AddOpponent(sensor, o, o.Opp1Pos, o.Opp1HeadingRad, o.HasOpp1);
+            AddOpponent(sensor, o, o.Opp2Pos, o.Opp2HeadingRad, o.HasOpp2);
+            AddOpponent(sensor, o, o.Opp3Pos, o.Opp3HeadingRad, o.HasOpp3);
+        }
+
+        private static void AddOpponent(VectorSensor sensor, in RobotObservation o, Vector3 pos, float headingRad, bool has)
+        {
+            Vector3 rel = has ? (pos - o.Position) : Vector3.zero;
+            sensor.AddObservation(rel.x / PosScale);
+            sensor.AddObservation(rel.z / PosScale);
+            sensor.AddObservation(has ? Mathf.Sin(headingRad) : 0f);
+            sensor.AddObservation(has ? Mathf.Cos(headingRad) : 0f);
+            sensor.AddObservation(has ? 1f : 0f);
         }
 
         private static void AddRelOrZero(VectorSensor sensor, in RobotObservation o, Vector3 worldPos, bool valid)

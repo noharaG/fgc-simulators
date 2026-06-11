@@ -808,17 +808,30 @@ namespace FGC.App
             // ★味方の意図(2026-06-12): 自分以外の味方2台の位置・速度・保持数（slot順で安定収集）
             Vector3 m1p = selfPos, m1v = Vector3.zero, m2p = selfPos, m2v = Vector3.zero;
             int m1h = 0, m2h = 0; bool hasM1 = false, hasM2 = false;
+            // ★敵の可視情報(2026-06-12 情報非対称): 敵3台の位置と向きのみ（速度・保持＝意図は与えない）
+            Vector3 o1p = selfPos, o2p = selfPos, o3p = selfPos;
+            float o1h = 0f, o2h = 0f, o3h = 0f; bool hasO1 = false, hasO2 = false, hasO3 = false;
             foreach (var other in _robots)
             {
-                if (other == actor || other.alliance != actor.alliance) continue;
-                Vector3 ov = Vector3.zero;
-                if (_ecsRobots == null || !_ecsRobots.TryGetVelocity(other, out ov, out _))
+                if (other == actor) continue;
+                if (other.alliance == actor.alliance)
                 {
-                    var orb = other.GetComponent<Rigidbody>();
-                    ov = orb != null ? orb.linearVelocity : Vector3.zero;
+                    Vector3 ov = Vector3.zero;
+                    if (_ecsRobots == null || !_ecsRobots.TryGetVelocity(other, out ov, out _))
+                    {
+                        var orb = other.GetComponent<Rigidbody>();
+                        ov = orb != null ? orb.linearVelocity : Vector3.zero;
+                    }
+                    if (!hasM1) { m1p = other.transform.position; m1v = ov; m1h = other.HeldBalls; hasM1 = true; }
+                    else if (!hasM2) { m2p = other.transform.position; m2v = ov; m2h = other.HeldBalls; hasM2 = true; }
                 }
-                if (!hasM1) { m1p = other.transform.position; m1v = ov; m1h = other.HeldBalls; hasM1 = true; }
-                else if (!hasM2) { m2p = other.transform.position; m2v = ov; m2h = other.HeldBalls; hasM2 = true; }
+                else
+                {
+                    float oh = other.transform.eulerAngles.y * Mathf.Deg2Rad;
+                    if (!hasO1) { o1p = other.transform.position; o1h = oh; hasO1 = true; }
+                    else if (!hasO2) { o2p = other.transform.position; o2h = oh; hasO2 = true; }
+                    else if (!hasO3) { o3p = other.transform.position; o3h = oh; hasO3 = true; }
+                }
             }
 
             return new RobotObservation
@@ -848,11 +861,66 @@ namespace FGC.App
                 FieldBallCount = fieldBalls,
                 // 味方の意図（位置・速度・保持数 ×2台）
                 Mate1Pos = m1p, Mate1Vel = m1v, Mate1Held = m1h, HasMate1 = hasM1,
-                Mate2Pos = m2p, Mate2Vel = m2v, Mate2Held = m2h, HasMate2 = hasM2
+                Mate2Pos = m2p, Mate2Vel = m2v, Mate2Held = m2h, HasMate2 = hasM2,
+                // 全500球の密度グリッド（選手の客観視・距離減衰つき・同盟別共有参照）
+                BallGrid = GetBallGridShared(actor.alliance),
+                // 敵3台の可視情報（位置と向きのみ＝意図は読めない）
+                Opp1Pos = o1p, Opp1HeadingRad = o1h, HasOpp1 = hasO1,
+                Opp2Pos = o2p, Opp2HeadingRad = o2h, HasOpp2 = hasO2,
+                Opp3Pos = o3p, Opp3HeadingRad = o3h, HasOpp3 = hasO3
             };
         }
 
         // 全能ボール観測用の使い回しバッファ（近傍5球。毎フレームのGC割当を避ける）
         private readonly Vector3[] _ballObsBuffer = new Vector3[5];
+
+        // ★全500球の密度グリッド（7×7・ワールド固定＝「選手がスタンドから客観視するフィールド」の表現）。
+        // ★距離減衰つき視界(2026-06-12 ユーザー要望): 自陣ステーション（選手の立ち位置）から遠いマスほど
+        // 球数の把握が曖昧になる（距離比例の乗算ノイズ）。手前=正確・最奥=±farPerceptionNoise。
+        // 見え方が同盟で異なるため赤/青の2枚を毎フレーム1回ずつ生成し、観測には参照を共有する。
+        public const int BallGridX = 7, BallGridZ = 7;
+        [Tooltip("最奥マスでの球数把握の相対ノイズσ（0=全マス正確、0.5=最奥±50%程度ブレる）")]
+        public float farPerceptionNoise = 0.5f;
+        private readonly float[] _ballGridRaw = new float[BallGridX * BallGridZ];
+        private readonly float[] _ballGridRed = new float[BallGridX * BallGridZ];
+        private readonly float[] _ballGridBlue = new float[BallGridX * BallGridZ];
+        private int _ballGridFrame = -1;
+
+        private float[] GetBallGridShared(AllianceColor alliance)
+        {
+            if (_ballGridFrame != Time.frameCount)
+            {
+                if (useEcsBalls && _ecsBalls != null)
+                    _ecsBalls.FillBallDensityGrid(BallGridX, BallGridZ, _ballGridRaw);
+                else
+                    System.Array.Clear(_ballGridRaw, 0, _ballGridRaw.Length);
+                ApplyPerceptionFalloff(_ballGridRaw, _ballGridRed, AllianceColor.Red);
+                ApplyPerceptionFalloff(_ballGridRaw, _ballGridBlue, AllianceColor.Blue);
+                _ballGridFrame = Time.frameCount;
+            }
+            return alliance == AllianceColor.Red ? _ballGridRed : _ballGridBlue;
+        }
+
+        /// <summary>自陣スタンド（赤=x7側/青=x0側の外・z中央）からの距離に比例して各マスの球数を曖昧化する。</summary>
+        private void ApplyPerceptionFalloff(float[] raw, float[] dst, AllianceColor alliance)
+        {
+            float viewX = alliance == AllianceColor.Red ? FieldConstants.FieldSizeX + 1.5f : -1.5f;
+            float viewZ = FieldConstants.FieldSizeZ * 0.5f;
+            float cellW = FieldConstants.FieldSizeX / BallGridX;
+            float cellD = FieldConstants.FieldSizeZ / BallGridZ;
+            const float dNear = 2f, dFar = 9.5f; // スタンドから最寄り/最奥マスへの概距離
+            for (int gz = 0; gz < BallGridZ; gz++)
+            {
+                for (int gx = 0; gx < BallGridX; gx++)
+                {
+                    int i = gz * BallGridX + gx;
+                    float cx = (gx + 0.5f) * cellW, cz = (gz + 0.5f) * cellD;
+                    float d = Mathf.Sqrt((cx - viewX) * (cx - viewX) + (cz - viewZ) * (cz - viewZ));
+                    float t = Mathf.Clamp01((d - dNear) / (dFar - dNear)); // 0=至近(正確)〜1=最奥(曖昧)
+                    float noise = 1f + farPerceptionNoise * t * Random.Range(-1f, 1f);
+                    dst[i] = Mathf.Max(0f, raw[i] * noise);
+                }
+            }
+        }
     }
 }
