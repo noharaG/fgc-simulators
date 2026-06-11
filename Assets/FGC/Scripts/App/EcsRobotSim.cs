@@ -179,10 +179,10 @@ namespace FGC.App
                 // MLAgentController の行動が物理・機構に一切届かず「行動→報酬」の因果が切断されていた
                 // （run9/run10の2000万stepが無意味化した根本原因）。Controller優先・b.Npcは保険のフォールバック。
                 DriveCommand cmd = DriveCommand.Zero;
+                bool isHuman = (b.SlotIndex == humanSlot)
+                    && b.Alliance == (_config != null ? _config.PlayerAlliance : b.Alliance);
                 if (_active)
                 {
-                    bool isHuman = (b.SlotIndex == humanSlot)
-                        && b.Alliance == (_config != null ? _config.PlayerAlliance : b.Alliance);
                     if (isHuman)
                     {
                         cmd = GamepadInput.Read();
@@ -200,10 +200,20 @@ namespace FGC.App
                 // 機構(EcsMechanics)が参照する LastCommand を更新（ExternallyDriven中は本体が更新しないため）。
                 if (b.Actor != null) b.Actor.SetLastCommand(cmd);
 
-                // 運動学（加速度/角加速度ランプ）。Coreの DifferentialDriveModel と同値（DriveKinematics）。
-                DriveKinematics.Step(
-                    b.Spec.MaxSpeed, b.Spec.MaxOmega, b.Spec.MaxAccel, b.Spec.MaxAlpha, b.Spec.Deadzone,
-                    cmd.Forward, cmd.Turn, dt, ref b.Speed, ref b.Omega);
+                // 運動学（加速度/角加速度ランプ）。
+                // ★2026-06-12 足回り修正:
+                //  - 人間入力のみ expo/deadzone 整形(Step)。NPC/MLは直結(StepDirect)＝Java正典のNPC経路と同じ。
+                //    （従来は全員に整形が掛かり「指令0.7→実効0.49」「微小旋回がdeadzoneで消滅」＝旋回が遅かった）
+                //  - 前進+旋回の合算が車輪上限を超えないよう飽和（曲率保存スケーリング・実機準拠）。
+                if (isHuman)
+                    DriveKinematics.Step(
+                        b.Spec.MaxSpeed, b.Spec.MaxOmega, b.Spec.MaxAccel, b.Spec.MaxAlpha, b.Spec.Deadzone,
+                        cmd.Forward, cmd.Turn, dt, ref b.Speed, ref b.Omega);
+                else
+                    DriveKinematics.StepDirect(
+                        b.Spec.MaxSpeed, b.Spec.MaxOmega, b.Spec.MaxAccel, b.Spec.MaxAlpha,
+                        cmd.Forward, cmd.Turn, dt, ref b.Speed, ref b.Omega);
+                DriveKinematics.SaturateToWheelLimit(ref b.Speed, ref b.Omega, b.Spec.WheelTrack, b.Spec.MaxSpeed);
 
                 // PhysicsVelocity 直書き（旧 ApplyDrive と同値）: 水平=前方×目標速、Y(重力)は保持、角速度=ヨーのみ。
                 PhysicsVelocity pv = _em.GetComponentData<PhysicsVelocity>(b.Entity);

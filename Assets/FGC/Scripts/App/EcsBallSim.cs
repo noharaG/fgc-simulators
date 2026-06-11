@@ -49,6 +49,8 @@ namespace FGC.App
         private EntityQuery _renderQuery;
         private bool _spawned;
         private bool _pouring;
+        /// <summary>球の放出（500球流し込み）が進行中か。MatchDirectorが「放出完了を待ってから試合開始」に使う。</summary>
+        public bool IsPouring => _pouring;
         private float _pourCarry;
         private int _toPour; // この放出サイクルで残り放出する球数（intakeでプールへ戻った球の再放出を防ぐ上限）
         private Unity.Mathematics.Random _rng = Unity.Mathematics.Random.CreateFromIndex(0xA1B2C3u);

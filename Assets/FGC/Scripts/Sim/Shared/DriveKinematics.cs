@@ -43,6 +43,38 @@ namespace FGC.Sim.Shared
             right = currentSpeed + currentOmega * half;
         }
 
+        /// <summary>★2026-06-12: NPC/ML用の**直結版**（deadzone/expo無し・線形マッピング）。
+        /// Step() の expo/deadzone は人間スティック用の入力整形で、Java正典でもNPC(NpcRobot.integrate)は
+        /// 生の目標値を直接ランプしていた。Unity移植時に全コントローラへ整形が掛かったため
+        /// 「指令0.7が実効0.49」「微小旋回がdeadzoneで消える」＝旋回が遅い症状の原因になっていた。</summary>
+        public static void StepDirect(
+            float maxSpeed, float maxOmega, float maxAccel, float maxAlpha,
+            float forwardInput, float turnInput, float dt,
+            ref float currentSpeed, ref float currentOmega)
+        {
+            float targetSpeed = Clamp01Signed(forwardInput) * maxSpeed;
+            float targetOmega = Clamp01Signed(turnInput) * maxOmega;
+            currentSpeed = Approach(currentSpeed, targetSpeed, maxAccel, dt);
+            currentOmega = Approach(currentOmega, targetOmega, maxAlpha, dt);
+        }
+
+        /// <summary>★2026-06-12: 差動2輪の**車輪速度飽和**。前進+旋回の合算 |v ± ω·track/2| が
+        /// 車輪上限(=maxSpeed)を超える場合、v・ω を同率で縮め曲率を保ったまま物理上限内へ収める。
+        /// Java正典は車輪速度を統計用に逆算するだけで飽和させない（v満速+ω満速が同時に出る）が、
+        /// 実機では不可能なためユーザー要望で追加（曲率保存スケーリング）。</summary>
+        public static void SaturateToWheelLimit(ref float speed, ref float omega, float wheelTrack, float maxWheelSpeed)
+        {
+            float half = wheelTrack * 0.5f;
+            float left = speed - omega * half;
+            float right = speed + omega * half;
+            float la = Abs(left), ra = Abs(right);
+            float worst = la > ra ? la : ra;
+            if (worst <= maxWheelSpeed || worst < 1e-6f) return;
+            float k = maxWheelSpeed / worst;
+            speed *= k;
+            omega *= k;
+        }
+
         private static float ApplyDeadzone(float v, float dz)
         {
             if (Abs(v) < dz) return 0f;

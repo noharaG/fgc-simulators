@@ -83,6 +83,10 @@ namespace FGC.App
         [Tooltip("Start時にSetupMenuを介さず即試合開始する（学習用シーン。VR対戦ではfalse=メニュー待ち）")]
         public bool autoBegin = false;
 
+        [Tooltip("autoBegin/autoRestart時の準備フェーズ長[s]。球の放出(約10s)と静定を待ってから試合開始する。" +
+                 "スケール時間なので学習(time-scale 20)では実時間1秒。2026-06-12 ユーザー指定=20秒。")]
+        public float prepSeconds = 20f;
+
         private readonly MatchManager _match = new MatchManager();
         private readonly List<RobotActor> _robots = new List<RobotActor>(6);
 
@@ -143,7 +147,7 @@ namespace FGC.App
                 menu.OnStartRequested += BeginMatch;
             }
 
-            if (autoBegin) BeginMatch(config); // 学習用: メニューを介さず即開始
+            if (autoBegin) StartCoroutine(BeginAfterPrep()); // 学習/観戦用: 準備フェーズ(prepSeconds)後に開始
         }
 
         private void OnFinish()
@@ -172,12 +176,20 @@ namespace FGC.App
             }
 #endif
 
-            // 学習モード: 環境をリセットして次の試合を即開始（連続エピソード）
+            // 学習モード: 環境をリセットし、準備フェーズ(prepSeconds=球の放出と静定待ち)後に次の試合を開始
             if (autoRestart)
             {
                 ResetMatch();
-                BeginMatch(config);
+                StartCoroutine(BeginAfterPrep());
             }
+        }
+
+        /// <summary>準備フェーズ: prepSeconds(既定20s・スケール時間)待ってから試合開始。
+        /// 球の放出(50球/s×500=10s)が完了し床に静定するのを待つ（従来は放出中に試合が始まっていた）。</summary>
+        private System.Collections.IEnumerator BeginAfterPrep()
+        {
+            yield return new WaitForSeconds(prepSeconds);
+            BeginMatch(config);
         }
 
         /// <summary>環境を初期状態へ戻す（タイマー・球・ロボ位置/保持/登攀）。autoRestartや手動再戦で使う。</summary>

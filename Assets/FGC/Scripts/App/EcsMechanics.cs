@@ -35,6 +35,7 @@ namespace FGC.App
         private const float ElevationDeg = 25f;
         private static readonly float FireInterval = 1f / FieldConstants.ShootBps; // =0.2 (BPS5)
         private const float AimSpreadDeg = 4f;
+        private const float MissSpreadDeg = 28f; // 成功判定に失敗した射出の散布（missRadius2.0m相当の外し方）
         private static readonly Vector3 MuzzleOffset = new Vector3(0f, 0.30f, 0.30f);
         private const float ShotTtl = 3.0f;
 
@@ -47,8 +48,12 @@ namespace FGC.App
         private static readonly float ClimbHigh = FieldConstants.BraceHighEnd;  // 1.97
         private static readonly Collider[] ClimbHits = new Collider[8];
 
-        /// <summary>1球格納するたびに発火（預けた/撃ったロボ, 格納種別）。ML報酬・演出用（現状ML OFF）。</summary>
+        /// <summary>1球格納するたびに発火（預けた/撃ったロボ, 格納種別）。ML報酬・演出用。</summary>
         public System.Action<RobotActor, StorageKind> OnDeposited;
+
+        /// <summary>**射出（シュート）由来**の格納時のみ追加発火（OnDepositedと併発）。
+        /// ML報酬で「持ち込み格納」より「射出」を優遇するボーナス用（2026-06-12 ユーザー要望）。</summary>
+        public System.Action<RobotActor, StorageKind> OnShotDeposited;
 
         private struct Zone
         {
@@ -193,7 +198,11 @@ namespace FGC.App
                         if (zone.Restricted && (s.Shooter == null || s.Shooter.alliance != zone.Alliance)) continue;
                         _balls.DespawnToPool(s.Ball);
                         _wildfire.DepositToStorage(zone.Kind, 1);
-                        if (s.Shooter != null) OnDeposited?.Invoke(s.Shooter, zone.Kind);
+                        if (s.Shooter != null)
+                        {
+                            OnDeposited?.Invoke(s.Shooter, zone.Kind);
+                            OnShotDeposited?.Invoke(s.Shooter, zone.Kind); // 射出由来＝ボーナス対象
+                        }
                         remove = true;
                         break;
                     }
@@ -207,23 +216,68 @@ namespace FGC.App
             }
         }
 
-        /// <summary>RobotShooter.Fire 同値：前方＋仰角＋小ばらつきで ECS球を放ち、飛来球として登録。</summary>
+        /// <summary>RobotShooter.Fire 相当。★Java版移植(2026-06-12): **距離・角度・接触・混雑で成功率が低下**
+        /// (CompetitionManager.java の prob 計算と同係数)。成功→従来の小ばらつき(±4°)、
+        /// 失敗→大ばらつき(±MissSpreadDeg＋速度ジッタ＝missRadius2.0相当の散布)で外れる。</summary>
         private void FireShot(RobotActor a, Transform t)
         {
+            float prob = ComputeShotSuccessProb(a, t);
+            bool success = Random.value < prob;
+
             Vector3 fwd = t.forward; fwd.y = 0f; fwd.Normalize();
             Vector3 axis = t.right;
             Vector3 dir = Quaternion.AngleAxis(-ElevationDeg, axis) * fwd; // 上向きへ傾ける
-            float yaw = Random.Range(-AimSpreadDeg, AimSpreadDeg) * 0.5f;
-            float pitch = Random.Range(-AimSpreadDeg, AimSpreadDeg) * 0.5f;
+            float spread = success ? AimSpreadDeg : MissSpreadDeg;
+            float yaw = Random.Range(-spread, spread) * 0.5f;
+            float pitch = Random.Range(-spread, spread) * 0.5f;
             dir = Quaternion.AngleAxis(yaw, Vector3.up) * Quaternion.AngleAxis(pitch, axis) * dir;
+            float speed = success ? LaunchSpeed : LaunchSpeed * Random.Range(0.65f, 1.25f); // 失敗は吹かし/失速も
 
             Vector3 muzzle = t.TransformPoint(MuzzleOffset);
-            Entity ball = _balls.LaunchBall(muzzle, dir * LaunchSpeed);
+            Entity ball = _balls.LaunchBall(muzzle, dir * speed);
             if (ball != Entity.Null)
             {
                 a.HeldBalls--;
                 _shots.Add(new Shot { Ball = ball, Shooter = a, Ttl = ShotTtl });
             }
+        }
+
+        /// <summary>射出の成功率（Java CompetitionManager の prob 計算を忠実移植・2026-06-12）。
+        /// base=ShootSuccessProb(0.7) ×
+        ///   距離ペナルティ: 1-0.5·(min(1, 距離/射程2.0))² （近距離1.0→射程端0.5）
+        ///   角度ペナルティ: max(0, cos(自陣ゴール方向との角度差)) （正面1→真横0→後方0）
+        ///   接触ペナルティ: 0.6m以内の他ロボ1台ごとに ×0.7 （押し合い中は当たらない）
+        ///   混雑ペナルティ: ゴール1.2m以内の他ロボ1台ごとに ×0.85
+        /// Javaの遮蔽ペナルティ(射線ブロック×0.25)は、ECSではゴール構造物の物理壁が球を実際に弾くため省略。
+        /// Java同様 base×0.3 を下限、base を上限にクランプ。</summary>
+        private float ComputeShotSuccessProb(RobotActor a, Transform t)
+        {
+            float baseProb = FieldConstants.ShootSuccessProb;
+            Vector2 goal = FieldLayout.NpcGoal(a.alliance);
+            Vector3 pos = t.position;
+            float dx = goal.x - pos.x, dz = goal.y - pos.z;
+            float dist = Mathf.Sqrt(dx * dx + dz * dz);
+
+            float ratio = Mathf.Min(1f, dist / FieldConstants.ShootRange);
+            float distPen = 1f - 0.5f * ratio * ratio;
+
+            float aimDeg = Mathf.Atan2(dx, dz) * Mathf.Rad2Deg;          // forward=(sinθ,cosθ)系
+            float errRad = Mathf.Abs(Mathf.DeltaAngle(t.eulerAngles.y, aimDeg)) * Mathf.Deg2Rad;
+            float anglePen = Mathf.Max(0f, Mathf.Cos(errRad));
+
+            float contactPen = 1f, crowdPen = 1f;
+            foreach (var m in _mechs)
+            {
+                var o = m.Actor;
+                if (o == null || o == a) continue;
+                Vector3 op = o.transform.position;
+                if (Vector3.Distance(op, pos) < 0.6f) contactPen *= 0.7f;
+                float gdx = op.x - goal.x, gdz = op.z - goal.y;
+                if (Mathf.Sqrt(gdx * gdx + gdz * gdz) < 1.2f) crowdPen *= 0.85f;
+            }
+
+            float prob = baseProb * distPen * anglePen * contactPen * crowdPen;
+            return Mathf.Clamp(prob, baseProb * 0.3f, baseProb);
         }
 
         /// <summary>RobotClimb 同値：BRACE("brace*")近接で接触判定、機体高さでゾーン化、非接触は猶予後 None。</summary>
