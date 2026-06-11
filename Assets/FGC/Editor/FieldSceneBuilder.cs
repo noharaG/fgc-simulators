@@ -27,14 +27,16 @@ namespace FGC.Editor
 
             CreateLighting();
             var wildfire = CreateWildfire();
-            var rig = CreateXrRig();
-            var director = CreateDirector(wildfire, rig);
+            // ★VR廃止(2026-06-11): XRリグは生成しない。PC操縦用デスクトップカメラに置き換え。
+            // 視点は従来の選手視点と同一（自陣ステーション・目線高さ）、FOVのみ60→90に広角化。
+            var director = CreateDirector(wildfire, null);
             BuildFieldInScene(director); // フィールド＋コライダをエディタ時に焼き込み（Play開始を軽く）
-            CreateSetupMenu(director, rig);
+            CreateDesktopCamera(director);
+            CreateSetupMenu(director, null);
             CreateHud(director);
 
             EditorSceneManager.MarkSceneDirty(scene);
-            Debug.Log("[FGC] Field scene を生成しました。Play で MatchDirector が起動します。");
+            Debug.Log("[FGC] Field scene を生成しました（PC操縦・俯瞰カメラ）。Play で MatchDirector が起動します。");
         }
 
         [MenuItem("FGC/Build Training Scene")]
@@ -96,6 +98,20 @@ namespace FGC.Editor
             return wf;
         }
 
+        /// <summary>PC操縦用カメラ（VR廃止後の標準）。位置/向きは DesktopCameraRig が実行時に
+        /// 従来の選手視点（AllianceStationPlacer）と同一計算で配置する。FOVのみ90に広角化。</summary>
+        private static void CreateDesktopCamera(MatchDirector director)
+        {
+            var camGo = new GameObject("Main Camera");
+            camGo.tag = "MainCamera";
+            var cam = camGo.AddComponent<Camera>();
+            cam.fieldOfView = 90f;
+            camGo.AddComponent<AudioListener>();
+            var rig = camGo.AddComponent<DesktopCameraRig>();
+            rig.director = director;
+        }
+
+        // （VR廃止・2026-06-11以降未使用。VR復活時の参照用に残置）
         private static VrPlayerRig CreateXrRig()
         {
             var originGo = new GameObject("XR Origin");

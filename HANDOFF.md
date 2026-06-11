@@ -35,6 +35,14 @@
     監視: `ml/train_fgc_run10.log`。※2チーム自己対戦は半数が凍結スナップショット側に回るためステップ消化が run9 比でやや遅いのが正常。
   - 監視: `Get-Content ml\train_fgc_run9.log -Tail 20 -Wait` ／ TensorBoard: `ml\.venv310\Scripts\tensorboard.exe --logdir results`。Mean Reward(-1.4≈時間ペナルティのみ)が上昇していけば学習成功。2000万stepで約5時間・50万stepごとにチェックポイント。
 
+## 🖥 6/11: VR廃止・PC操縦視点の広角化（ユーザー指示）
+
+- **VRは「なかったこと」に（ユーザー決定）**: `FGC > Build Field Scene` はXRリグを生成せず、`DesktopCameraRig`（新規・FGC.App）に置き換え。
+  OpenXRローダは既に無効（学習対応時にOFF）。VRコード（VrPlayerRig/AllianceStationPlacer等）は参照用に残置・未使用。段階⑥はクローズ。
+- **視点はそのまま・FOVだけ拡大**: 位置/向き/高さは従来の選手視点と同一計算（AllianceStationPlacer・自陣ステーション目線1.6m）。
+  **変更は視野角のみ 60→90**（横の視界拡大）。SetupMenuの同盟/身長変更にはLateUpdateポーリングで即追従。
+  反映手順: Unity再コンパイル → `FGC > Build Field Scene` 再実行 → Play（学習ビルドには無関係）。
+
 ## 🔍 6/10 夕: ML学習監査（並列ワークフロー＋反証検証）で根本原因を特定・一括修正
 
 run10(2000万step完走)が頭打ちだった真因を6次元監査で特定。**確定した壁と修正(すべて適用済み・要再ビルド)**:
