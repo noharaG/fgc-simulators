@@ -34,7 +34,10 @@ if ($Resume) { $opts += " --resume" }
 # CUDA_VISIBLE_DEVICES=-1: CUDA-build torch crashed natively in NVIDIA dlls (nvdxgdmal64);
 # venv now has CPU torch, the env var is belt-and-suspenders.
 $cmd = "cmd.exe /c `"set CUDA_VISIBLE_DEVICES=-1 && `"$ml`" `"$cfg`" $opts > `"$log`" 2>&1`""
-$r = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = $cmd; CurrentDirectory = $proj }
+# ShowWindow=0 (SW_HIDE): the visible console window was accidentally closed twice (^C killed
+# training at 4.78M and 4.68M steps). Hidden window = nothing to close. Monitor via the log file.
+$startup = New-CimInstance -ClassName Win32_ProcessStartup -ClientOnly -Property @{ ShowWindow = [UInt16]0 }
+$r = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = $cmd; CurrentDirectory = $proj; ProcessStartupInformation = $startup }
 if ($r.ReturnValue -ne 0) { Write-Error "WMI Create failed: $($r.ReturnValue)"; exit 1 }
 Write-Host "Detached training started. run-id=$RunId pid=$($r.ProcessId)"
 Write-Host "Log: $log"
