@@ -164,7 +164,6 @@ namespace FGC.App
 
             // 全ロボ共通: 場のECS球(Disabled除外＝未格納球のみ)の位置を1回取得して使い回す。
             NativeArray<LocalTransform> balls = _ballQuery.ToComponentDataArray<LocalTransform>(Allocator.Temp);
-            int humanSlot = _config != null ? _config.HumanSlotIndex() : -1;
 
             foreach (var b in _bots)
             {
@@ -179,23 +178,19 @@ namespace FGC.App
                 // MLAgentController の行動が物理・機構に一切届かず「行動→報酬」の因果が切断されていた
                 // （run9/run10の2000万stepが無意味化した根本原因）。Controller優先・b.Npcは保険のフォールバック。
                 DriveCommand cmd = DriveCommand.Zero;
-                bool isHuman = (b.SlotIndex == humanSlot)
-                    && b.Alliance == (_config != null ? _config.PlayerAlliance : b.Alliance);
+                // ★2026-06-12 修正: 旧実装は config.HumanSlotIndex() の**フォールバック**(人間スロット不在でも
+                // 赤0を返す)を信じてスロット0を人間扱い→全ML構成(観戦/学習)でゲームパッド未入力=完全停止していた。
+                // run11の学習も赤チームが実質2台で戦っていた重大バグ。人間判定は Controller の実型で行い、
+                // 指令取得は全コントローラ統一(HumanControllerは内部でGamepadInputを読む)。
+                bool isHuman = b.Actor != null && b.Actor.Controller is HumanController;
                 if (_active)
                 {
-                    if (isHuman)
-                    {
-                        cmd = GamepadInput.Read();
-                    }
-                    else
-                    {
-                        var ctrl = (b.Actor != null && b.Actor.Controller != null) ? b.Actor.Controller : b.Npc;
-                        // 観測は MatchDirector.BuildObservation(敵/味方/残時間込み)を優先。無ければECSローカル版。
-                        RobotObservation obs = (b.Actor != null && b.Actor.ObservationProvider != null)
-                            ? b.Actor.ObservationProvider()
-                            : BuildObservation(b, lt.Position, heading, balls);
-                        cmd = ctrl.GetCommand(in obs, dt);
-                    }
+                    var ctrl = (b.Actor != null && b.Actor.Controller != null) ? b.Actor.Controller : b.Npc;
+                    // 観測は MatchDirector.BuildObservation(敵/味方/残時間込み)を優先。無ければECSローカル版。
+                    RobotObservation obs = (b.Actor != null && b.Actor.ObservationProvider != null)
+                        ? b.Actor.ObservationProvider()
+                        : BuildObservation(b, lt.Position, heading, balls);
+                    cmd = ctrl.GetCommand(in obs, dt);
                 }
                 // 機構(EcsMechanics)が参照する LastCommand を更新（ExternallyDriven中は本体が更新しないため）。
                 if (b.Actor != null) b.Actor.SetLastCommand(cmd);
