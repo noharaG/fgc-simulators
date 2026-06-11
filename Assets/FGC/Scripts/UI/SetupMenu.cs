@@ -1,6 +1,5 @@
 using FGC.Core;
 using FGC.Match;
-using FGC.VR;
 using UnityEngine;
 
 namespace FGC.UI
@@ -8,13 +7,13 @@ namespace FGC.UI
     /// <summary>
     /// 試合前/実行中のセットアップUI（PLAN.md §3.7）。同盟（赤/青）・モード・操縦者身長・
     /// 6スロットの制御ソース（人間/NPC/ML）を変更する。まずは依存の少ない IMGUI で実装し、
-    /// 後で VR ワールド空間 Canvas（UI Toolkit/uGUI）へ載せ替える。
-    /// MatchConfig を編集し、VrPlayerRig へ身長/配置を反映、StartRequested で試合開始を通知。
+    /// 後で PC ワールド空間 Canvas（UI Toolkit/uGUI）へ載せ替える。
+    /// MatchConfig を編集し、StartRequested で試合開始を通知。
+    /// 身長変更は config.EyeHeight 経由で DesktopCameraRig が LateUpdate で自動追従する。
     /// </summary>
     public sealed class SetupMenu : MonoBehaviour
     {
         public MatchConfig config = MatchConfig.Default(AllianceColor.Red, MatchMode.ThreeVsThree);
-        public VrPlayerRig rig;
 
         public System.Action<MatchConfig> OnStartRequested;
         public System.Action<MatchConfig> OnConfigChanged;
@@ -94,14 +93,12 @@ namespace FGC.UI
             if (config.PlayerAlliance == a) return;
             config.PlayerAlliance = a;
             config.RebuildSlots();
-            ApplyPlacement();
             Changed();
         }
 
         private void SetEyeHeight(float h)
         {
             config.EyeHeight = Mathf.Clamp(h, 1.0f, 2.2f);
-            if (rig != null) rig.SetEyeHeight(config.EyeHeight);
             Changed();
         }
 
@@ -109,11 +106,6 @@ namespace FGC.UI
         {
             config.SetSlotKind(slot, k);
             Changed();
-        }
-
-        private void ApplyPlacement()
-        {
-            if (rig != null) AllianceStationPlacer.Place(rig, config);
         }
 
         private void Changed() => OnConfigChanged?.Invoke(config);

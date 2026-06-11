@@ -2,13 +2,14 @@ using FGC.Core;
 using FGC.Match;
 using UnityEngine;
 
-namespace FGC.VR
+namespace FGC.App
 {
     /// <summary>
     /// 同盟選択に応じて選手の立ち位置・向きを算出する（PLAN.md §3.7）。
     /// **赤=右(x=7側) / 青=左(x=0側)**（ロボ初期位置と同じ側・FieldLayout参照）。
     /// ALLIANCE STATION はフィールド端の外側（FieldLayout.StationStandOffset）。
     /// 立ち位置は**人間操縦ロボの初期位置の真後ろ**（同じ奥行きz）。正面（フィールド横断方向）を向く（外から目視操作）。
+    /// PC操縦専用（VR廃止・2026-06-11）。DesktopCameraRig が LateUpdate でこのクラスを呼んで配置する。
     /// </summary>
     public static class AllianceStationPlacer
     {
@@ -35,15 +36,6 @@ namespace FGC.VR
             // z は保ったまま、反対側(x)へまっすぐ向く＝自ロボが視界の真ん中、その先に敵陣。
             Vector3 dir = new Vector3(FieldConstants.FieldSizeX * 0.5f - pos.x, 0f, 0f);
             return Quaternion.LookRotation(dir.normalized, Vector3.up);
-        }
-
-        /// <summary>リグを同盟ステーションへ配置（位置＋向き）。操縦ロボの真後ろに立つ。</summary>
-        public static void Place(VrPlayerRig rig, MatchConfig config)
-        {
-            if (rig == null || config == null) return;
-            var alliance = config.PlayerAlliance;
-            int humanSlot = config.HumanSlotIndex();
-            rig.PlaceAt(StationPosition(alliance, humanSlot), StationRotation(alliance, humanSlot));
         }
     }
 }

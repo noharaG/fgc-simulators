@@ -1,5 +1,4 @@
 using FGC.Core;
-using FGC.VR;
 using UnityEngine;
 
 namespace FGC.App
@@ -7,7 +6,7 @@ namespace FGC.App
     /// <summary>
     /// PC操縦用カメラ（VR廃止に伴うXRリグの置き換え・2026-06-11）。
     /// **視点は従来の選手視点と完全に同一**（自陣ALLIANCE STATIONに立つ・目線高さ config.EyeHeight・
-    /// 位置/向きは AllianceStationPlacer と同じ計算）。変更は**視野角のみ**（60→90で横の視界を拡大）。
+    /// 位置/向きは AllianceStationPlacer と同じ計算）。変更は**視野角のみ**（60→100で横の視界を拡大）。
     /// SetupMenu で同盟・身長を変えると LateUpdate のポーリングが検知して即追従する。
     /// </summary>
     [RequireComponent(typeof(Camera))]
@@ -15,8 +14,8 @@ namespace FGC.App
     {
         public MatchDirector director;
 
-        [Tooltip("視野角(垂直FOV)。旧VR視点は60相当。横の視界を広げるため90に拡大（位置・高さは不変）。")]
-        public float fieldOfView = 90f;
+        [Tooltip("視野角(垂直FOV)。旧VR視点は60相当。横の視界を広げるため100に拡大（位置・高さは不変）。")]
+        public float fieldOfView = 100f;
 
         private AllianceColor _alliance;
         private int _slot = -1;

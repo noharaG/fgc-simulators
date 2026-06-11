@@ -3,8 +3,7 @@
   "rootNamespace": "FGC.UI",
   "references": [
     "FGC.Core",
-    "FGC.Match",
-    "FGC.VR"
+    "FGC.Match"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

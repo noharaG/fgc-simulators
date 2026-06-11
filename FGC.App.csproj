@@ -66,10 +66,12 @@
     <Compile Include="Assets\FGC\Scripts\App\EcsMechanics.cs" />
     <Compile Include="Assets\FGC\Scripts\App\EcsMatchBridge.cs" />
     <Compile Include="Assets\FGC\Scripts\App\ShotBall.cs" />
+    <Compile Include="Assets\FGC\Scripts\App\AllianceStationPlacer.cs" />
     <Compile Include="Assets\FGC\Scripts\App\BraceMarker.cs" />
     <Compile Include="Assets\FGC\Scripts\App\EcsBallSim.cs" />
     <Compile Include="Assets\FGC\Scripts\App\MatchDirector.cs" />
     <Compile Include="Assets\FGC\Scripts\App\EcsRobotSim.cs" />
+    <Compile Include="Assets\FGC\Scripts\App\DesktopCameraRig.cs" />
     <Compile Include="Assets\FGC\Scripts\App\StorageTrigger.cs" />
     <Compile Include="Assets\FGC\Scripts\App\ScoreBoard.cs" />
     <Compile Include="Assets\FGC\Scripts\App\RobotIntake.cs" />
@@ -238,10 +240,6 @@
       <HintPath>C:\Program Files\Unity\Hub\Editor\6000.0.76f1\Editor\Data\Managed\UnityEngine\UnityEngine.SubstanceModule.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="UnityEngine.SubsystemsModule">
-      <HintPath>C:\Program Files\Unity\Hub\Editor\6000.0.76f1\Editor\Data\Managed\UnityEngine\UnityEngine.SubsystemsModule.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
     <Reference Include="UnityEngine.TLSModule">
       <HintPath>C:\Program Files\Unity\Hub\Editor\6000.0.76f1\Editor\Data\Managed\UnityEngine\UnityEngine.TLSModule.dll</HintPath>
       <Private>False</Private>
@@ -302,16 +300,8 @@
       <HintPath>C:\Program Files\Unity\Hub\Editor\6000.0.76f1\Editor\Data\Managed\UnityEngine\UnityEngine.VFXModule.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="UnityEngine.VRModule">
-      <HintPath>C:\Program Files\Unity\Hub\Editor\6000.0.76f1\Editor\Data\Managed\UnityEngine\UnityEngine.VRModule.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
     <Reference Include="UnityEngine.VirtualTexturingModule">
       <HintPath>C:\Program Files\Unity\Hub\Editor\6000.0.76f1\Editor\Data\Managed\UnityEngine\UnityEngine.VirtualTexturingModule.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="UnityEngine.XRModule">
-      <HintPath>C:\Program Files\Unity\Hub\Editor\6000.0.76f1\Editor\Data\Managed\UnityEngine\UnityEngine.XRModule.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="UnityEditor">
@@ -1101,7 +1091,6 @@
     <ProjectReference Include="FGC.Robot.csproj" />
     <ProjectReference Include="FGC.Match.csproj" />
     <ProjectReference Include="FGC.Input.csproj" />
-    <ProjectReference Include="FGC.VR.csproj" />
     <ProjectReference Include="FGC.UI.csproj" />
     <ProjectReference Include="FGC.ML.csproj" />
     <ProjectReference Include="FGC.Sim.Shared.csproj" />

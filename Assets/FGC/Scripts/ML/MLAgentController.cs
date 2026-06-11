@@ -158,6 +158,15 @@ namespace FGC.ML
             // ロボ/球のリセットは MatchManager 連携で Sim 側が実施する。
         }
 
+        /// <summary>学習済みモデルを設定して推論モードにする（観戦用・2026-06-12）。
+        /// BehaviorType=Default のままトレーナ未接続なら、Model が設定されていれば Inference Engine で推論する。</summary>
+        public void SetModel(Unity.InferenceEngine.ModelAsset model)
+        {
+            var bp = GetComponent<BehaviorParameters>();
+            if (bp == null) bp = gameObject.AddComponent<BehaviorParameters>();
+            bp.Model = model;
+        }
+
         /// <summary>外部（RewardShaper）から報酬を加算する公開API（PLAN.md §3.8）。</summary>
         public void AddShapedReward(float r) => AddReward(r);
 

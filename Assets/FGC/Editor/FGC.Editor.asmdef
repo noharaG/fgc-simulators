@@ -7,10 +7,9 @@
     "FGC.Ball",
     "FGC.Robot",
     "FGC.Match",
-    "FGC.VR",
     "FGC.UI",
     "FGC.App",
-    "Unity.XR.CoreUtils"
+    "Unity.InferenceEngine"
   ],
   "includePlatforms": [
     "Editor"

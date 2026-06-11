@@ -4,7 +4,6 @@ using FGC.Core;
 using FGC.Match;
 using FGC.Robot;
 using FGC.UI;
-using FGC.VR;
 using UnityEngine;
 
 namespace FGC.App
@@ -18,7 +17,6 @@ namespace FGC.App
     {
         [Header("依存（シーン内参照。未設定なら生成）")]
         public WildfireManager wildfire;
-        public VrPlayerRig playerRig;
 
         [Header("フィールド外観（STEP由来 FBX：実形状・実色）")]
         [Tooltip("Onshape→Blender 由来の field FBX。FieldSceneBuilder が割り当てる。")]
@@ -75,6 +73,10 @@ namespace FGC.App
                  "boolフラグ(シリアライズ可)経由でランタイムに全ML化する。")]
         public bool forceMlAgents = false;
 
+        [Tooltip("学習済みモデル(onnx)。設定するとMLスロットはトレーナ未接続時にこのモデルで推論する（観戦用）。" +
+                 "未設定ならヒューリスティック(ルールベースNPC)にフォールバック。Build Spectate Sceneが割り当てる。")]
+        public Unity.InferenceEngine.ModelAsset mlModel;
+
         [Tooltip("試合終了で自動的にリセット→再開する（ML学習で連続エピソードを回す用。VR対戦ではfalse）")]
         public bool autoRestart = false;
 
@@ -130,8 +132,6 @@ namespace FGC.App
 #if FGC_MLAGENTS
             CreateRewardShaper();
 #endif
-            if (playerRig != null) AllianceStationPlacer.Place(playerRig, config);
-
             _match.OnMatchFinish += OnFinish;
 
             // 「試合開始」ボタンの結線を実行時に張る。エディタ生成時のAction購読はPlay(ドメインリロード)で
@@ -707,6 +707,8 @@ namespace FGC.App
                     var ml = actor.GetComponent<FGC.ML.MLAgentController>();
                     if (ml == null) ml = actor.gameObject.AddComponent<FGC.ML.MLAgentController>();
                     ml.observationProvider = () => BuildObservation(actor);
+                    // 観戦用: 学習済みモデルが設定されていれば推論モードで動く（トレーナ接続時は学習が優先）。
+                    if (mlModel != null) ml.SetModel(mlModel);
                     return ml;
 #endif
                 // ML無効時(FGC_MLAGENTS未定義)はMLスロットもNPCで代替

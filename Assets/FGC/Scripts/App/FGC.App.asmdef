@@ -8,7 +8,6 @@
     "FGC.Robot",
     "FGC.Match",
     "FGC.Input",
-    "FGC.VR",
     "FGC.UI",
     "FGC.ML",
     "Unity.ML-Agents",
@@ -18,7 +17,8 @@
     "Unity.Physics",
     "Unity.Transforms",
     "Unity.Mathematics",
-    "Unity.Collections"
+    "Unity.Collections",
+    "Unity.InferenceEngine"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

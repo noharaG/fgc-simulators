@@ -3,8 +3,6 @@ using FGC.Ball;
 using FGC.Core;
 using FGC.Match;
 using FGC.UI;
-using FGC.VR;
-using Unity.XR.CoreUtils;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -28,15 +26,43 @@ namespace FGC.Editor
             CreateLighting();
             var wildfire = CreateWildfire();
             // ★VR廃止(2026-06-11): XRリグは生成しない。PC操縦用デスクトップカメラに置き換え。
-            // 視点は従来の選手視点と同一（自陣ステーション・目線高さ）、FOVのみ60→90に広角化。
-            var director = CreateDirector(wildfire, null);
+            // 視点は従来の選手視点と同一（自陣ステーション・目線高さ）、FOVのみ60→100に広角化。
+            var director = CreateDirector(wildfire);
             BuildFieldInScene(director); // フィールド＋コライダをエディタ時に焼き込み（Play開始を軽く）
             CreateDesktopCamera(director);
-            CreateSetupMenu(director, null);
+            CreateSetupMenu(director);
             CreateHud(director);
 
             EditorSceneManager.MarkSceneDirty(scene);
             Debug.Log("[FGC] Field scene を生成しました（PC操縦・俯瞰カメラ）。Play で MatchDirector が起動します。");
+        }
+
+        /// <summary>観戦シーン（2026-06-12）: 全6機が**学習済みモデル(onnx)で推論**して戦う様子を見る。
+        /// トレーナ不要・Playするだけ。モデルは Assets/FGC/ML/Models/FgcRobot.onnx（results からコピー済み）。</summary>
+        [MenuItem("FGC/Build Spectate Scene (学習済みAI観戦)")]
+        public static void BuildSpectateScene()
+        {
+            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+
+            CreateLighting();
+            var wildfire = CreateWildfire();
+            var director = CreateDirector(wildfire);
+            BuildFieldInScene(director);
+            director.autoRestart = true;   // 試合終了後も連続観戦
+            director.autoBegin = true;     // Playで即開始
+            director.config.SetAllKind(ControllerKind.MLAgent);
+            director.forceMlAgents = true;
+
+            const string modelPath = "Assets/FGC/ML/Models/FgcRobot.onnx";
+            var model = AssetDatabase.LoadAssetAtPath<Unity.InferenceEngine.ModelAsset>(modelPath);
+            if (model != null) director.mlModel = model;
+            else Debug.LogWarning($"[FGC] 学習済みモデルが見つかりません（{modelPath}）。ヒューリスティックで動きます。");
+
+            CreateDesktopCamera(director); // 選手視点(FOV100)で観戦
+            CreateHud(director);
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            Debug.Log("[FGC] Spectate scene を生成しました。Play で学習済みAIの3v3が始まります（トレーナ不要）。");
         }
 
         [MenuItem("FGC/Build Training Scene")]
@@ -46,7 +72,7 @@ namespace FGC.Editor
 
             CreateLighting();
             var wildfire = CreateWildfire();
-            var director = CreateDirector(wildfire, null); // VRリグ無し
+            var director = CreateDirector(wildfire); // VRリグ無し
             BuildFieldInScene(director); // フィールド＋コライダをエディタ時に焼き込み
             director.autoRestart = true;                    // 連続エピソード
             director.autoBegin = true;                      // メニュー無しで即開始
@@ -99,49 +125,23 @@ namespace FGC.Editor
         }
 
         /// <summary>PC操縦用カメラ（VR廃止後の標準）。位置/向きは DesktopCameraRig が実行時に
-        /// 従来の選手視点（AllianceStationPlacer）と同一計算で配置する。FOVのみ90に広角化。</summary>
+        /// 従来の選手視点（AllianceStationPlacer）と同一計算で配置する。FOVのみ100に広角化。</summary>
         private static void CreateDesktopCamera(MatchDirector director)
         {
             var camGo = new GameObject("Main Camera");
             camGo.tag = "MainCamera";
             var cam = camGo.AddComponent<Camera>();
-            cam.fieldOfView = 90f;
+            cam.fieldOfView = 100f;
             camGo.AddComponent<AudioListener>();
             var rig = camGo.AddComponent<DesktopCameraRig>();
             rig.director = director;
         }
 
-        // （VR廃止・2026-06-11以降未使用。VR復活時の参照用に残置）
-        private static VrPlayerRig CreateXrRig()
-        {
-            var originGo = new GameObject("XR Origin");
-            var origin = originGo.AddComponent<XROrigin>();
-
-            var offsetGo = new GameObject("Camera Offset");
-            offsetGo.transform.SetParent(originGo.transform, false);
-
-            var camGo = new GameObject("Main Camera");
-            camGo.tag = "MainCamera";
-            camGo.transform.SetParent(offsetGo.transform, false);
-            var cam = camGo.AddComponent<Camera>();
-            camGo.AddComponent<AudioListener>();
-            // 段階⑥: センターアイ姿勢の TrackedPoseDriver(Input System) を焼き込み時に付与。
-            // XROrigin.Awake が「Tracked Pose Driver が無い」警告を出す前に存在させるためここで設定する。
-            VrPlayerRig.ConfigureHeadTracking(cam);
-
-            origin.Camera = cam;
-            origin.CameraFloorOffsetObject = offsetGo;
-
-            var rig = originGo.AddComponent<VrPlayerRig>();
-            return rig;
-        }
-
-        private static MatchDirector CreateDirector(WildfireManager wf, VrPlayerRig rig)
+        private static MatchDirector CreateDirector(WildfireManager wf)
         {
             var go = new GameObject("MatchDirector");
             var dir = go.AddComponent<MatchDirector>();
             dir.wildfire = wf;
-            dir.playerRig = rig;
 
             // STEP由来の実形状FBX（実色付き）を割り当て。Play時に MatchDirector が配置する。
             var fieldModel = AssetDatabase.LoadAssetAtPath<GameObject>(FieldFbxPath);
@@ -190,11 +190,10 @@ namespace FGC.Editor
             hud.director = dir;
         }
 
-        private static void CreateSetupMenu(MatchDirector dir, VrPlayerRig rig)
+        private static void CreateSetupMenu(MatchDirector dir)
         {
             var go = new GameObject("SetupMenu");
             var menu = go.AddComponent<SetupMenu>();
-            menu.rig = rig;
             menu.config = dir.config;
             menu.OnStartRequested += dir.BeginMatch;
         }
