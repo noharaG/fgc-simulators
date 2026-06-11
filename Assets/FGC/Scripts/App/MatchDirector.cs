@@ -789,6 +789,38 @@ namespace FGC.App
                 }
             }
 
+            // ★全能観測(2026-06-12): 近傍5球（1番目は従来のnearestを使用）＋残球数
+            int ballsValid = 0;
+            Vector3 b2 = selfPos, b3 = selfPos, b4 = selfPos, b5 = selfPos;
+            int fieldBalls = 0;
+            if (useEcsBalls && _ecsBalls != null)
+            {
+                fieldBalls = _ecsBalls.ActiveBallCount;
+                int got = _ecsBalls.GetNearestBalls(selfPos, _ballObsBuffer);
+                ballsValid = got;
+                if (got > 1) b2 = _ballObsBuffer[1];
+                if (got > 2) b3 = _ballObsBuffer[2];
+                if (got > 3) b4 = _ballObsBuffer[3];
+                if (got > 4) b5 = _ballObsBuffer[4];
+            }
+            else if (hasBall) ballsValid = 1;
+
+            // ★味方の意図(2026-06-12): 自分以外の味方2台の位置・速度・保持数（slot順で安定収集）
+            Vector3 m1p = selfPos, m1v = Vector3.zero, m2p = selfPos, m2v = Vector3.zero;
+            int m1h = 0, m2h = 0; bool hasM1 = false, hasM2 = false;
+            foreach (var other in _robots)
+            {
+                if (other == actor || other.alliance != actor.alliance) continue;
+                Vector3 ov = Vector3.zero;
+                if (_ecsRobots == null || !_ecsRobots.TryGetVelocity(other, out ov, out _))
+                {
+                    var orb = other.GetComponent<Rigidbody>();
+                    ov = orb != null ? orb.linearVelocity : Vector3.zero;
+                }
+                if (!hasM1) { m1p = other.transform.position; m1v = ov; m1h = other.HeldBalls; hasM1 = true; }
+                else if (!hasM2) { m2p = other.transform.position; m2v = ov; m2h = other.HeldBalls; hasM2 = true; }
+            }
+
             return new RobotObservation
             {
                 Alliance = actor.alliance,
@@ -809,8 +841,18 @@ namespace FGC.App
                 NearestOpponent = nearOpp,
                 HasOpponent = hasOpp,
                 NearestTeammate = nearMate,
-                HasTeammate = hasMate
+                HasTeammate = hasMate,
+                // 全能観測（近傍5球＋残球数）
+                Ball2 = b2, Ball3 = b3, Ball4 = b4, Ball5 = b5,
+                BallsValid = ballsValid,
+                FieldBallCount = fieldBalls,
+                // 味方の意図（位置・速度・保持数 ×2台）
+                Mate1Pos = m1p, Mate1Vel = m1v, Mate1Held = m1h, HasMate1 = hasM1,
+                Mate2Pos = m2p, Mate2Vel = m2v, Mate2Held = m2h, HasMate2 = hasM2
             };
         }
+
+        // 全能ボール観測用の使い回しバッファ（近傍5球。毎フレームのGC割当を避ける）
+        private readonly Vector3[] _ballObsBuffer = new Vector3[5];
     }
 }

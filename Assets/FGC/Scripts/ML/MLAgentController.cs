@@ -30,7 +30,9 @@ namespace FGC.ML
 
         // 脳設定（yaml の behavior 名・観測/行動次元と一致させる）
         public const string BehaviorNameConst = "FgcRobot";
-        public const int ObservationSize = 25;        // CollectObservations の追加数と一致（基本16＋近傍ロボ6＋自陣ゴール/同盟3）
+        public const int ObservationSize = 46;        // CollectObservations の追加数と一致
+        // 内訳: 自分12 + 最寄り球4 + 近傍敵3 + 近傍味方3 + 自陣ゴール/同盟3
+        //     + 全能ボール(2-5番目の球8 + 残球数1)=9 + 味方意図(位置2+速度2+保持1+有無1)×2=12（2026-06-12拡張）
         public const int ContinuousActions = 2;       // 並進, 旋回
         private static readonly int[] DiscreteBranches = { 2, 2, 2 }; // Intake, Shoot, Climb
 
@@ -120,6 +122,36 @@ namespace FGC.ML
             sensor.AddObservation((ownGoal.x - o.Position.x) / PosScale);  // 23 自陣ゴールへのΔx
             sensor.AddObservation((ownGoal.y - o.Position.z) / PosScale);  // 24 自陣ゴールへのΔz
             sensor.AddObservation(o.Alliance == AllianceColor.Blue ? 1f : 0f); // 25 同盟(赤0/青1)
+
+            // ★全能ボール観測(2026-06-12): 近傍2〜5番目の球の相対位置(8) + 残球数(1) = 26-34
+            AddRelOrZero(sensor, o, o.Ball2, o.BallsValid > 1);
+            AddRelOrZero(sensor, o, o.Ball3, o.BallsValid > 2);
+            AddRelOrZero(sensor, o, o.Ball4, o.BallsValid > 3);
+            AddRelOrZero(sensor, o, o.Ball5, o.BallsValid > 4);
+            sensor.AddObservation(o.FieldBallCount / (float)FieldConstants.BallCount); // 残球数(供給の枯渇)
+
+            // ★味方の意図(2026-06-12): 位置Δ(2)+速度(2)+保持(1)+有無(1) ×2台 = 35-46。
+            // 速度=進行方向(何をしに行くか)、保持数=満載なら帰投/空なら回収中、の予測材料。
+            AddMate(sensor, o, o.Mate1Pos, o.Mate1Vel, o.Mate1Held, o.HasMate1);
+            AddMate(sensor, o, o.Mate2Pos, o.Mate2Vel, o.Mate2Held, o.HasMate2);
+        }
+
+        private static void AddRelOrZero(VectorSensor sensor, in RobotObservation o, Vector3 worldPos, bool valid)
+        {
+            Vector3 rel = valid ? (worldPos - o.Position) : Vector3.zero;
+            sensor.AddObservation(rel.x / PosScale);
+            sensor.AddObservation(rel.z / PosScale);
+        }
+
+        private static void AddMate(VectorSensor sensor, in RobotObservation o, Vector3 pos, Vector3 vel, int held, bool has)
+        {
+            Vector3 rel = has ? (pos - o.Position) : Vector3.zero;
+            sensor.AddObservation(rel.x / PosScale);
+            sensor.AddObservation(rel.z / PosScale);
+            sensor.AddObservation(has ? vel.x / SpeedScale : 0f);
+            sensor.AddObservation(has ? vel.z / SpeedScale : 0f);
+            sensor.AddObservation(has ? held / (float)FieldConstants.RobotBallCapacity : 0f);
+            sensor.AddObservation(has ? 1f : 0f);
         }
 
         public override void OnActionReceived(ActionBuffers actions)

@@ -163,6 +163,39 @@ namespace FGC.App
             return found;
         }
 
+        /// <summary>場に残っている球の総数（観測用）。</summary>
+        public int ActiveBallCount => _spawned ? _active.Count : 0;
+
+        /// <summary>最寄りk個の球位置を近い順に buffer へ書き込む（読み取り専用・観測用）。戻り値=有効数。
+        /// ★2026-06-12: 全能ボール観測（近傍5球）用。500球×選択走査でも観測頻度では十分軽い。</summary>
+        public int GetNearestBalls(Vector3 from, Vector3[] buffer)
+        {
+            if (!_spawned || buffer == null || buffer.Length == 0) return 0;
+            int k = buffer.Length;
+            // 距離の小さい順に上位kを選択（挿入ソート式・k小前提）
+            var best = new float[k];
+            int found = 0;
+            for (int j0 = 0; j0 < k; j0++) best[j0] = float.MaxValue;
+            float3 p = (float3)from;
+            for (int i = 0; i < _active.Count; i++)
+            {
+                float3 bp = _em.GetComponentData<LocalTransform>(_active[i]).Position;
+                float d2 = math.distancesq(bp, p);
+                if (d2 >= best[k - 1]) continue;
+                int j = (found < k ? found : k - 1);
+                while (j > 0 && best[j - 1] > d2)
+                {
+                    best[j] = best[j - 1];
+                    buffer[j] = buffer[j - 1];
+                    j--;
+                }
+                best[j] = d2;
+                buffer[j] = (Vector3)bp;
+                if (found < k) found++;
+            }
+            return found;
+        }
+
         /// <summary>球Entityの現在位置（飛来球の得点判定用）。Entityが無効ならfalse。</summary>
         public bool TryGetBallPosition(Entity e, out Vector3 pos)
         {

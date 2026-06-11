@@ -29,9 +29,15 @@ namespace FGC.App
         // 報酬が無く、ランダム探索では学習の足がかりを掴めずELO/報酬が頭打ちになった。
         // 最初のリンク「球を拾う」に密な報酬を与えて段階学習を可能にする（格納1.0より小さく保つ）。
         public float intakeReward = 0.1f;          // 球を1個拾う（HeldBalls増加）あたり
-        // 射出（シュート）由来の格納に上乗せするボーナス（2026-06-12 ユーザー要望: シュートを優遇）。
-        // 持ち込み格納=1.0 に対し 射出=1.0+1.0=2.0。外すリスクを補って余りある期待値にし射撃行動を促す。
-        public float shotDepositBonus = 1.0f;
+        // 射出（シュート）由来の格納に上乗せするボーナス（2026-06-12 ユーザー要望: シュート重視）。
+        // 持ち込み格納=1.0 に対し 射出=1.0+2.0=3.0（3倍優遇）。成功率低下(距離/角度/接触/混雑)の
+        // リスクを補って余りある期待値にし、「良い位置から撃つ」行動へ方策を誘導する。
+        public float shotDepositBonus = 2.0f;
+        // 他ロボとの接触ペナルティ（2026-06-12 ユーザー要望: 押し合い/接触プレーを抑止）。
+        // 中心間距離<0.6m（機体0.5m角＝ほぼ接触。Javaのシュート接触判定と同閾値）を「接触中」とみなし、
+        // 接触相手1台につき毎秒この値を減点。150秒常時接触でも-7.5と格納報酬(数十)を壊さない強さ。
+        public float contactPenaltyPerSec = 0.05f;
+        public float contactRadius = 0.6f;
 
         // ★ファーミング対策(2026-06-10): 登攀は「エピソード内の最高到達ゾーン」を超えた時だけ報酬。
         // 旧実装(直前ゾーンとの差分)はブレース接触→離脱(猶予1s)→再接触の往復で+0.3が無限に稼げた
@@ -60,7 +66,16 @@ namespace FGC.App
         /// StorageTrigger と同一シグネチャ・同一ハンドラを使う。ECSモードでは StorageTrigger 無効＝こちらだけが発火する。</summary>
         public void BindEcs(EcsMechanics ecs)
         {
-            if (ecs != null) ecs.OnDeposited += HandleDeposit;
+            if (ecs == null) return;
+            ecs.OnDeposited += HandleDeposit;
+            ecs.OnShotDeposited += HandleShotDeposit; // 射出由来の格納＝ボーナス上乗せ（シュート重視）
+        }
+
+        /// <summary>射出（シュート）で入った球へのボーナス。OnDeposited の基本報酬に上乗せされる。</summary>
+        private void HandleShotDeposit(RobotActor actor, StorageKind kind)
+        {
+            var ml = actor.GetComponent<MLAgentController>();
+            if (ml != null) ml.AddShapedReward(shotDepositBonus);
         }
 
         private void HandleDeposit(RobotActor actor, StorageKind kind)
@@ -106,6 +121,17 @@ namespace FGC.App
                 _lastHeld.TryGetValue(actor, out int prevHeld);
                 if (actor.HeldBalls > prevHeld)
                     ml.AddShapedReward(intakeReward * (actor.HeldBalls - prevHeld));
+
+                // 他ロボ接触ペナルティ（2026-06-12）: 中心間<contactRadius の相手1台ごとに毎秒減点（敵味方問わず）
+                int contacts = 0;
+                Vector3 selfPos = actor.transform.position;
+                foreach (var other in director.Robots)
+                {
+                    if (other == actor) continue;
+                    if (Vector3.Distance(selfPos, other.transform.position) < contactRadius) contacts++;
+                }
+                if (contacts > 0)
+                    ml.AddShapedReward(-contactPenaltyPerSec * contacts * dt);
                 _lastHeld[actor] = actor.HeldBalls;
             }
         }

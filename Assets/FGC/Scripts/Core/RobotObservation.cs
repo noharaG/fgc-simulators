@@ -32,5 +32,15 @@ namespace FGC.Core
         public bool HasOpponent;
         public Vector3 NearestTeammate;
         public bool HasTeammate;
+
+        // ===== 全能観測（2026-06-12 ユーザー要望: 「味方の意図」と「ボールの位置」を全能で） =====
+        // 近傍2〜5番目の球（ワールド座標。BallsValid 未満のスロットのみ有効、無効時は Position と同値）
+        public Vector3 Ball2, Ball3, Ball4, Ball5;
+        public int BallsValid;        // 有効な近傍球の数（0〜5。1番目は HasNearestBall/NearestBall）
+        public int FieldBallCount;    // 場に残っている球の総数（供給の枯渇を知覚できる）
+
+        // 味方2台の「意図」: 位置＋速度（進行方向＝何をしに行くか）＋保持数（満載→ゴールへ/空→回収へ）
+        public Vector3 Mate1Pos, Mate1Vel; public int Mate1Held; public bool HasMate1;
+        public Vector3 Mate2Pos, Mate2Vel; public int Mate2Held; public bool HasMate2;
     }
 }

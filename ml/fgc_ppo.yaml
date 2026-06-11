@@ -1,8 +1,8 @@
 # FGC Simulator - ML-Agents training config (PPO + self-play)
 # Launch via ml/train.ps1 -> mlagents-learn ml/fgc_ppo.yaml --run-id=fgc_xxx
-# Obs 22 dims (self12 + nearest ball4 + nearby robots6), actions = continuous 2 (drive/turn)
-#   + discrete [2,2,2] (intake/shoot/climb). MLAgentController.cs is the source of truth
-#   (obs size is provided by the Unity BehaviorParameters at runtime, not hard-coded here).
+# Obs 46 dims (self12 + ball4 + opp3 + mate3 + goal/alliance3 + omniscient balls9 + mate intent12),
+#   actions = continuous 2 (drive/turn) + discrete [2,2,2] (intake/shoot/climb).
+#   MLAgentController.cs is the source of truth (obs size comes from Unity BehaviorParameters).
 # NOTE: ASCII-only on purpose. mlagents/PyYAML may decode this file with the OS locale
 #   codec (cp932 on JP Windows); non-ASCII comments cause UnicodeDecodeError. Keep it ASCII.
 behaviors:
