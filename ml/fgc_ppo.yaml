@@ -31,7 +31,10 @@ behaviors:
     max_steps: 20000000
     time_horizon: 256
     summary_freq: 20000
-    threaded: true
+    # threaded:false on purpose (2026-06-11): with threaded:true, resuming a self-play run hits a
+    # ghost-trainer race ("RuntimeError: dictionary changed size during iteration" in _swap_snapshots)
+    # that silently kills the update thread while envs keep stepping. Serial advance avoids it.
+    threaded: false
     # Self-play (symmetric 3v3)
     self_play:
       save_steps: 50000
