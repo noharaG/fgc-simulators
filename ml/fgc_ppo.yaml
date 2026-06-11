@@ -28,7 +28,7 @@ behaviors:
         strength: 1.0
     keep_checkpoints: 5
     checkpoint_interval: 500000
-    max_steps: 30000000  # 20M->30M (2026-06-11夜 ユーザー指示: 朝まで継続学習。resumeでCLI yamlのmax_stepsが適用される)
+    max_steps: 30000000  # 20M->30M (2026-06-11 night, user request: train until morning. CLI yaml applies on resume)
     time_horizon: 256
     summary_freq: 20000
     # threaded:false on purpose (2026-06-11): with threaded:true, resuming a self-play run hits a
