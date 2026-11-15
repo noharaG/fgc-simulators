@@ -1,0 +1,32 @@
+{
+  "name": "FGC.App",
+  "rootNamespace": "FGC.App",
+  "references": [
+    "FGC.Core",
+    "FGC.Field",
+    "FGC.Ball",
+    "FGC.Robot",
+    "FGC.Match",
+    "FGC.Input",
+    "FGC.UI",
+    "FGC.ML",
+    "Unity.ML-Agents",
+    "FGC.Sim.Shared",
+    "FGC.Sim.ECS",
+    "Unity.Entities",
+    "Unity.Physics",
+    "Unity.Transforms",
+    "Unity.Mathematics",
+    "Unity.Collections",
+    "Unity.InferenceEngine"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

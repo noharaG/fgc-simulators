@@ -1,0 +1,25 @@
+{
+  "name": "FGC.Editor",
+  "rootNamespace": "FGC.Editor",
+  "references": [
+    "FGC.Core",
+    "FGC.Field",
+    "FGC.Ball",
+    "FGC.Robot",
+    "FGC.Match",
+    "FGC.UI",
+    "FGC.App",
+    "Unity.InferenceEngine"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

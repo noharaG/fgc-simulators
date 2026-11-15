@@ -1,0 +1,23 @@
+{
+  "name": "FGC.Sim.ECS",
+  "rootNamespace": "FGC.Sim.ECS",
+  "references": [
+    "FGC.Core",
+    "FGC.Sim.Shared",
+    "Unity.Entities",
+    "Unity.Transforms",
+    "Unity.Physics",
+    "Unity.Mathematics",
+    "Unity.Burst",
+    "Unity.Collections"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

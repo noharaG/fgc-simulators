@@ -1,0 +1,46 @@
+# FGC Simulator - ML-Agents training config (PPO + self-play)
+# Launch via ml/train.ps1 -> mlagents-learn ml/fgc_ppo.yaml --run-id=fgc_xxx
+# Obs 110 dims (self12 + ball4 + opp3 + mate3 + goal/alliance3 + nearballs9 + mate-intent12
+#   + ball-density-grid 7x7=49 with distance-based perception noise + enemy pos/heading 15).
+#   actions = continuous 2 (drive/turn) + discrete [2,2,2] (intake/shoot/climb).
+#   MLAgentController.cs is the source of truth (obs size comes from Unity BehaviorParameters).
+# NOTE: ASCII-only on purpose. mlagents/PyYAML may decode this file with the OS locale
+#   codec (cp932 on JP Windows); non-ASCII comments cause UnicodeDecodeError. Keep it ASCII.
+behaviors:
+  FgcRobot:
+    trainer_type: ppo
+    hyperparameters:
+      batch_size: 2048
+      buffer_size: 20480
+      learning_rate: 3.0e-4
+      beta: 5.0e-3
+      epsilon: 0.2
+      lambd: 0.95
+      num_epoch: 3
+      learning_rate_schedule: linear
+    network_settings:
+      normalize: true
+      hidden_units: 256
+      num_layers: 2
+      vis_encode_type: simple
+    reward_signals:
+      extrinsic:
+        gamma: 0.99
+        strength: 1.0
+    keep_checkpoints: 5
+    checkpoint_interval: 500000
+    max_steps: 30000000  # 20M->30M (2026-06-11 night, user request: train until morning. CLI yaml applies on resume)
+    time_horizon: 256
+    summary_freq: 20000
+    # threaded:false on purpose (2026-06-11): with threaded:true, resuming a self-play run hits a
+    # ghost-trainer race ("RuntimeError: dictionary changed size during iteration" in _swap_snapshots)
+    # that silently kills the update thread while envs keep stepping. Serial advance avoids it.
+    threaded: false
+    # Self-play (symmetric 3v3)
+    self_play:
+      save_steps: 50000
+      team_change: 200000
+      swap_steps: 25000
+      window: 10
+      play_against_latest_model_ratio: 0.5
+      initial_elo: 1200.0

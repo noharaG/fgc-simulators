@@ -1,0 +1,27 @@
+{
+  "name": "FGC.Tests",
+  "rootNamespace": "FGC.Tests",
+  "references": [
+    "FGC.Core",
+    "FGC.Match",
+    "FGC.Robot",
+    "FGC.Sim.Shared",
+    "UnityEngine.TestRunner",
+    "UnityEditor.TestRunner"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": true,
+  "precompiledReferences": [
+    "nunit.framework.dll"
+  ],
+  "autoReferenced": false,
+  "defineConstraints": [
+    "UNITY_INCLUDE_TESTS"
+  ],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
