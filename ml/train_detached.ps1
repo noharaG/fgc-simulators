@@ -32,6 +32,10 @@ if (-not (Test-Path $EnvExe)) { Write-Error "env exe not found: $EnvExe (build T
 $opts = "--run-id=$RunId --env=$EnvExe --num-envs=$NumEnvs --time-scale=$TimeScale --torch-device=cpu"
 if (-not $WithGraphics) { $opts += " --no-graphics" }
 if ($Resume) { $opts += " --resume" }
+# --env-args must come LAST: everything after it is passed to the env executable.
+# -fgcTraining: force training mode in MatchDirector even if scene flags were saved off
+# (failsafe for the 2026-06-12 incident where TrainingScene flags got overwritten to 0).
+$opts += " --env-args -fgcTraining"
 
 # CUDA_VISIBLE_DEVICES=-1: CUDA-build torch crashed natively in NVIDIA dlls (nvdxgdmal64);
 # venv now has CPU torch, the env var is belt-and-suspenders.

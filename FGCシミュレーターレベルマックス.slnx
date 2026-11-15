@@ -4,8 +4,8 @@
   <Project Path="FGC.App.csproj" />
   <Project Path="FGC.Robot.csproj" />
   <Project Path="FGC.Sim.ECS.csproj" />
-  <Project Path="FGC.Tests.csproj" />
   <Project Path="FGC.Editor.csproj" />
+  <Project Path="FGC.Tests.csproj" />
   <Project Path="FGC.ML.csproj" />
   <Project Path="FGC.Ball.csproj" />
   <Project Path="FGC.Input.csproj" />

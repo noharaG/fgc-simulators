@@ -30,13 +30,16 @@ namespace FGC.App
         // 最初のリンク「球を拾う」に密な報酬を与えて段階学習を可能にする（格納1.0より小さく保つ）。
         public float intakeReward = 0.1f;          // 球を1個拾う（HeldBalls増加）あたり
         // 射出（シュート）由来の格納に上乗せするボーナス（2026-06-12 ユーザー要望: シュート重視）。
-        // 持ち込み格納=1.0 に対し 射出=1.0+2.0=3.0（3倍優遇）。成功率低下(距離/角度/接触/混雑)の
-        // リスクを補って余りある期待値にし、「良い位置から撃つ」行動へ方策を誘導する。
+        // 格納=1.0+本ボーナス2.0=3.0。成功率低下(距離/角度/接触/混雑)のリスクを補って余りある期待値にし、
+        // 「良い位置から撃つ」行動へ方策を誘導する。
+        // ※2026-06-13 持ち込み格納はゲームから廃止（EcsMechanics/StorageTrigger）。全格納が射出由来。
         public float shotDepositBonus = 2.0f;
         // 他ロボとの接触ペナルティ（2026-06-12 ユーザー要望: 押し合い/接触プレーを抑止）。
         // 中心間距離<0.6m（機体0.5m角＝ほぼ接触。Javaのシュート接触判定と同閾値）を「接触中」とみなし、
-        // 接触相手1台につき毎秒この値を減点。150秒常時接触でも-7.5と格納報酬(数十)を壊さない強さ。
-        public float contactPenaltyPerSec = 0.05f;
+        // 接触相手1台につき毎秒この値を減点。
+        // 2026-06-13 ユーザー要望で 0.05→0.15 に増量（run12で接触抑止が弱かったため3倍。
+        // 30秒の押し合い=-4.5≒シュート1本分の損になり、接触回避の優先度が上がる）。
+        public float contactPenaltyPerSec = 0.15f;
         public float contactRadius = 0.6f;
         // シュート場外ペナルティ（2026-06-12 ユーザー要望）: 射出した球がフィールド外に出たら撃った本人に減点。
         // 球は消滅(供給-1)するため、ボーナス3.0目当ての乱射を抑止しつつ「確実な位置から撃つ」へ誘導する。
@@ -72,6 +75,14 @@ namespace FGC.App
             if (ecs == null) return;
             ecs.OnDeposited += HandleDeposit;
             ecs.OnShotDeposited += HandleShotDeposit; // 射出由来の格納＝ボーナス上乗せ（シュート重視）
+            ecs.OnShotOut += HandleShotOut;           // 射出球の場外流出＝ペナルティ（乱射抑止）
+        }
+
+        /// <summary>射出したボールがフィールド外に出た時のペナルティ。</summary>
+        private void HandleShotOut(RobotActor actor)
+        {
+            var ml = actor.GetComponent<MLAgentController>();
+            if (ml != null) ml.AddShapedReward(-shotOutPenalty);
         }
 
         /// <summary>射出（シュート）で入った球へのボーナス。OnDeposited の基本報酬に上乗せされる。</summary>

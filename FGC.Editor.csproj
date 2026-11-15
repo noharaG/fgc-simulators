@@ -62,6 +62,7 @@
     <Analyzer Include="C:\Users\genri\Desktop\FGCシミュレーターレベルマックス\Library\PackageCache\com.unity.entities@e581b903be8e\Unity.Entities\SourceGenerators\Unity.Entities.Analyzer.CodeFixes.dll" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Assets\FGC\Editor\BatchBuild.cs" />
     <Compile Include="Assets\FGC\Editor\FieldSceneBuilder.cs" />
     <Compile Include="Assets\FGC\Editor\FieldModelPostprocessor.cs" />
   </ItemGroup>
@@ -1135,6 +1136,10 @@
     </Reference>
     <Reference Include="System.Xml.XPath.XDocument">
       <HintPath>C:\Program Files\Unity\Hub\Editor\6000.0.76f1\Editor\Data\UnityReferenceAssemblies\unity-4.8-api\Facades\System.Xml.XPath.XDocument.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Unity.InferenceEngine">
+      <HintPath>Library\ScriptAssemblies\Unity.InferenceEngine.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="UnityEditor.UI">

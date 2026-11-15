@@ -113,6 +113,22 @@ namespace FGC.App
             Physics.defaultSolverIterations = 8;
             Physics.defaultSolverVelocityIterations = 2;
 
+            // ★失敗保険(2026-06-12): コマンドライン引数 -fgcTraining で学習モードを強制できる。
+            // TrainingScene のシーン保存事故でフラグが落ちても（実際に発生: 6/11 22:30 にフラグ3つが0で
+            // 上書き保存され、run12初回起動がMLエージェント0体で接続タイムアウトした）、
+            // ランチャ(train_detached.ps1 の --env-args -fgcTraining)経由なら学習が必ず成立する。
+            foreach (var arg in System.Environment.GetCommandLineArgs())
+            {
+                if (arg == "-fgcTraining")
+                {
+                    forceMlAgents = true;
+                    autoBegin = true;
+                    autoRestart = true;
+                    Debug.Log("[FGC] -fgcTraining 引数を検出: 学習モード(全ML/自動開始/連続)を強制します。");
+                    break;
+                }
+            }
+
             // 学習用: 全ML化をランタイムで強制（readonly Slots がPlay開始で既定に戻る問題への対処）。
             // SpawnRobots が config.Slots を読む前に適用する。
             if (forceMlAgents)

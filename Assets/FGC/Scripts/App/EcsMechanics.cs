@@ -39,9 +39,6 @@ namespace FGC.App
         private static readonly Vector3 MuzzleOffset = new Vector3(0f, 0.30f, 0.30f);
         private const float ShotTtl = 3.0f;
 
-        // --- Storage（StorageTrigger 正典値） ---
-        private const float DepositInterval = 0.1f;
-
         // --- Climb（RobotClimb 正典値） ---
         private const float ReleaseGrace = 1.0f;
         private static readonly float ClimbLow = FieldConstants.BraceLowEnd;    // 0.24
@@ -52,7 +49,7 @@ namespace FGC.App
         public System.Action<RobotActor, StorageKind> OnDeposited;
 
         /// <summary>**射出（シュート）由来**の格納時のみ追加発火（OnDepositedと併発）。
-        /// ML報酬で「持ち込み格納」より「射出」を優遇するボーナス用（2026-06-12 ユーザー要望）。</summary>
+        /// シュートボーナス用（2026-06-12 ユーザー要望。2026-06-13 持ち込み格納廃止後は全格納が射出由来）。</summary>
         public System.Action<RobotActor, StorageKind> OnShotDeposited;
 
         /// <summary>射出した球が**フィールド外に出た**時に発火（撃ったロボ）。場外ペナルティ用（2026-06-12 ユーザー要望）。</summary>
@@ -70,7 +67,7 @@ namespace FGC.App
         private sealed class Mech
         {
             public RobotActor Actor;
-            public float IntakeCd, ShootCd, DepositCd, SinceTouch;
+            public float IntakeCd, ShootCd, SinceTouch;
         }
 
         private struct Shot
@@ -121,7 +118,7 @@ namespace FGC.App
         public void ResetState()
         {
             _shots.Clear();
-            foreach (var m in _mechs) { m.IntakeCd = m.ShootCd = m.DepositCd = 0f; m.SinceTouch = ReleaseGrace; }
+            foreach (var m in _mechs) { m.IntakeCd = m.ShootCd = 0f; m.SinceTouch = ReleaseGrace; }
         }
 
         private void FixedUpdate()
@@ -138,7 +135,6 @@ namespace FGC.App
                 if (a == null) continue;
                 if (m.IntakeCd > 0f) m.IntakeCd -= dt;
                 if (m.ShootCd > 0f) m.ShootCd -= dt;
-                if (m.DepositCd > 0f) m.DepositCd -= dt;
 
                 DriveCommand cmd = a.LastCommand;
                 Transform t = a.transform;
@@ -164,21 +160,8 @@ namespace FGC.App
                 // 登攀：BRACE近接＋高さで ClimbZone を更新（差動2輪では実登攀しないので実質Contact/None）。
                 UpdateClimb(m, t, dt);
 
-                // 格納（保持球）：自/全同盟ゾーン内なら1球ずつ預けてカウント加算。
-                if (a.HeldBalls > 0 && m.DepositCd <= 0f)
-                {
-                    for (int z = 0; z < _zones.Count; z++)
-                    {
-                        var zone = _zones[z];
-                        if (!Inside(t.position, zone.Center, zone.Half)) continue;
-                        if (zone.Restricted && a.alliance != zone.Alliance) continue;
-                        a.HeldBalls--;
-                        _wildfire.DepositToStorage(zone.Kind, 1);
-                        m.DepositCd = DepositInterval;
-                        OnDeposited?.Invoke(a, zone.Kind);
-                        break;
-                    }
-                }
+                // ★持ち込み格納は廃止(2026-06-13 ユーザー要望: ゲームから完全削除)。
+                // 得点経路はシュート（ProcessShots のゾーン内着弾）のみ。保持球は撃つしかない。
             }
         }
 
