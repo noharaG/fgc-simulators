@@ -34,7 +34,7 @@ FIRST Global Challenge（FGC）の操縦練習のために作ったシミュレ�
 5. [強化学習（Unity 版、任意）](#5-強化学習unity-版任意)
 6. [つまずいたとき](#6-つまずいたとき)
 7. [各フォルダに残っている資料について](#7-各フォルダに残っている資料について)
-8. [フィールドのモデルの出所](#8-フィールドのモデルの出所)
+8. [ライセンス](#8-ライセンス)
 9. [履歴について](#9-履歴について)
 
 ---
@@ -452,11 +452,24 @@ New-Item -ItemType Directory -Force C:\fgcbuild
 
 ---
 
-## 8. フィールドのモデルの出所
+## 8. ライセンス
 
-`unity-levelmax/Assets/Models/Field/FG26_F_v001.fbx` と、それを使うシーンは、
-FIRST Global が配布している FGC 2026 のフィールド CAD（`FG26_F.step`）を変換して作りました。
-フィールドの設計の権利は FIRST Global にあります。
+このリポジトリは [MIT ライセンス](LICENSE) で公開しています。
+
+- **自由に使ってかまいません。** 改変、再配布、自分の作品への組み込み、商用利用もできます。
+- **条件はひとつです。** 使うときは、提供元の表示（`Copyright (c) 2026 noharaG`）と [LICENSE](LICENSE) の文を残してください。
+  コードの一部を取り込む場合も、そのファイルか同梱の文書に提供元を書いてください。
+- 無保証です。使ったことで起きた問題について、提供元は責任を負いません。
+
+### ライセンスの対象外のもの
+
+次のものは提供元に権利がないため、MIT ライセンスの対象外です。
+
+| もの | 権利を持つところ |
+| --- | --- |
+| `unity-levelmax/Assets/Models/Field/FG26_F_v001.fbx`（フィールドの 3D モデル）と、それを埋め込んだシーン `Assets/setting.unity`・`Assets/TrainingScene.unity` のフィールドの形 | FIRST Global。FIRST Global が配布している FGC 2026 のフィールド CAD（`FG26_F.step`）を変換して作りました。扱いは FIRST Global の条件に従ってください |
+| `java-2d*/gradle/wrapper/gradle-wrapper.jar` | Gradle（Apache License 2.0） |
+| Unity・ML-Agents などのパッケージ（`Packages/manifest.json` に書いてあるもの。リポジトリには入っていません） | 各パッケージの提供元 |
 
 ---
 
