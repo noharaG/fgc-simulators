@@ -1,0 +1,18 @@
+# --- ビルドの出力 ---
+/build/
+/bin/
+
+# --- Gradle（手元で再生成できる） ---
+/.gradle/
+/.gradle-dist/
+
+# --- 実行時に書き出されるログ ---
+/logs/
+*.log
+
+# --- 手元だけの設定（Claude Code の許可設定など） ---
+/.claude/
+
+# --- OS が作るファイル ---
+Thumbs.db
+.DS_Store
