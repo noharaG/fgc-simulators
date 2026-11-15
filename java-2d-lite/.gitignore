@@ -1,0 +1,18 @@
+# --- Build output ---
+/build/
+/bin/
+
+# --- Gradle ---
+/.gradle/
+/.gradle-dist/
+
+# --- Logs / runtime output ---
+/logs/
+*.log
+
+# --- Local machine-specific settings ---
+/.claude/settings.local.json
+
+# --- OS junk ---
+Thumbs.db
+.DS_Store

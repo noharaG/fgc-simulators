@@ -1,0 +1,244 @@
+{
+  "schema_version": "1.5",
+  "field": {
+    "width_m": 7.0,
+    "height_m": 7.0,
+    "units": "meters",
+    "origin": "bottom-left",
+    "x_axis": "right",
+    "y_axis": "up",
+    "heading_zero": "+x axis, CCW positive"
+  },
+  "floor_reference": {
+    "riser_top_m": 0.7,
+    "note": "footprint coords already in field plane"
+  },
+  "robot_height_band_m": [
+    0.0,
+    0.5
+  ],
+  "viewpoints": {
+    "red": {
+      "station_edge": "x=7",
+      "render_rotation_deg": 90
+    },
+    "blue": {
+      "station_edge": "x=0",
+      "render_rotation_deg": -90
+    },
+    "default_render": "red"
+  },
+  "obstacles": [
+    {
+      "id": "suppression_unit",
+      "type": "polygon",
+      "category": "suppression_unit",
+      "vertices": [
+        [
+          1.627,
+          0.0
+        ],
+        [
+          5.373,
+          0.0
+        ],
+        [
+          4.946,
+          0.747
+        ],
+        [
+          2.054,
+          0.747
+        ]
+      ]
+    },
+    {
+      "id": "fire_shield_left",
+      "type": "polygon",
+      "category": "fire_shield",
+      "vertices": [
+        [
+          -0.004,
+          6.202
+        ],
+        [
+          -0.012,
+          5.823
+        ],
+        [
+          0.0,
+          5.801
+        ],
+        [
+          0.025,
+          5.811
+        ],
+        [
+          0.503,
+          6.089
+        ],
+        [
+          0.512,
+          6.298
+        ],
+        [
+          0.512,
+          6.923
+        ],
+        [
+          0.504,
+          7.002
+        ],
+        [
+          0.481,
+          7.012
+        ],
+        [
+          0.336,
+          7.012
+        ],
+        [
+          0.278,
+          7.008
+        ],
+        [
+          0.263,
+          6.997
+        ]
+      ]
+    },
+    {
+      "id": "fire_shield_right",
+      "type": "polygon",
+      "category": "fire_shield",
+      "vertices": [
+        [
+          6.488,
+          6.923
+        ],
+        [
+          6.489,
+          6.108
+        ],
+        [
+          6.5,
+          6.085
+        ],
+        [
+          7.0,
+          5.801
+        ],
+        [
+          7.012,
+          5.823
+        ],
+        [
+          7.004,
+          6.202
+        ],
+        [
+          6.736,
+          6.996
+        ],
+        [
+          6.685,
+          7.011
+        ],
+        [
+          6.516,
+          7.012
+        ],
+        [
+          6.496,
+          7.004
+        ],
+        [
+          6.488,
+          6.984
+        ]
+      ]
+    },
+    {
+      "id": "brace_2",
+      "type": "circle",
+      "category": "brace",
+      "center": [
+        5.777,
+        6.675
+      ],
+      "radius": 0.024,
+      "lean_per_0_5m": [
+        0.0,
+        0.0
+      ],
+      "note": "vertical in 0-0.5m band; extend to capsule along lean if robot expands above 0.5m"
+    },
+    {
+      "id": "brace_4",
+      "type": "circle",
+      "category": "brace",
+      "center": [
+        1.2,
+        6.75
+      ],
+      "radius": 0.024,
+      "lean_per_0_5m": [
+        0.0,
+        0.0
+      ],
+      "note": "vertical in 0-0.5m band; extend to capsule along lean if robot expands above 0.5m"
+    },
+    {
+      "id": "brace_diag_left",
+      "type": "capsule",
+      "category": "brace",
+      "p1": [
+        1.461,
+        5.899
+      ],
+      "p2": [
+        1.189,
+        6.785
+      ],
+      "radius": 0.039,
+      "note": "diagonal brace bar in 0-0.5m band; extend along its 3D lean if robot expands above 0.5m"
+    },
+    {
+      "id": "brace_diag_right",
+      "type": "capsule",
+      "category": "brace",
+      "p1": [
+        5.54,
+        5.899
+      ],
+      "p2": [
+        5.806,
+        6.787
+      ],
+      "radius": 0.043,
+      "note": "diagonal brace bar in 0-0.5m band; extend along its 3D lean if robot expands above 0.5m"
+    },
+    {
+      "id": "RED_FIELD_TAPE",
+      "type": "polygon",
+      "category": "tape",
+      "vertices": [
+        [0.000, 0.748],
+        [0.552, 0.748],
+        [0.552, 4.852],
+        [0.000, 4.852]
+      ]
+    },
+    {
+      "id": "BLUE_FIELD_TAPE",
+      "type": "polygon",
+      "category": "tape",
+      "vertices": [
+        [6.448, 0.748],
+        [7.000, 0.748],
+        [7.000, 4.852],
+        [6.448, 4.852]
+      ]
+    }
+  ]
+}
